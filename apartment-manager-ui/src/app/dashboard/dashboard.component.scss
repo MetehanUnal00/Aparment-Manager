@@ -1,0 +1,75 @@
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; // Make dashboard take full viewport height
+}
+
+.dashboard-header {
+  background-color: #007bff; // Example primary color
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h1 {
+    margin: 0;
+    font-size: 1.5em;
+  }
+
+  .logout-button {
+    background-color: #dc3545; // Example danger color
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #c82333;
+    }
+  }
+}
+
+.dashboard-nav {
+  background-color: #f8f9fa; // Light grey background
+  padding: 10px 20px;
+  border-bottom: 1px solid #dee2e6; // Separator line
+
+  ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+
+    li {
+      margin-right: 20px;
+
+      a {
+        text-decoration: none;
+        color: #007bff;
+        padding: 5px 0;
+
+        &:hover,
+        &.active {
+          color: #0056b3;
+          border-bottom: 2px solid #0056b3;
+        }
+      }
+    }
+  }
+}
+
+.dashboard-content {
+  flex-grow: 1; // Allows content to fill available space
+  padding: 20px;
+  background-color: #fff; // White background for content area
+}
+
+.dashboard-footer {
+  background-color: #343a40; // Dark footer
+  color: white;
+  text-align: center;
+  padding: 10px 20px;
+  font-size: 0.9em;
+}

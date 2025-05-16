@@ -1,0 +1,25 @@
+<div class="dashboard-container">
+  <header class="dashboard-header">
+    <h1>Welcome to Your Dashboard, {{ currentUser?.username }}!</h1>
+    <button (click)="logout()" class="logout-button">Logout</button>
+  </header>
+
+  <nav class="dashboard-nav">
+    <ul>
+      <li><a routerLink="overview" routerLinkActive="active">Overview</a></li>
+      <li><a routerLink="profile" routerLinkActive="active">Profile</a></li>
+      <li><a routerLink="settings" routerLinkActive="active">Settings</a></li>
+      <!-- Add more navigation items as needed -->
+    </ul>
+  </nav>
+
+  <main class="dashboard-content">
+    <p>This is your main dashboard area. Content will be displayed here based on navigation.</p>
+    <!-- Router outlet for child routes if you plan to have them -->
+    <!-- <router-outlet></router-outlet> -->
+  </main>
+
+  <footer class="dashboard-footer">
+    <p>&copy; 2024 Apartment Manager</p>
+  </footer>
+</div>
