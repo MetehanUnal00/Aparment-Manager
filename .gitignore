@@ -1,0 +1,30 @@
+# General
+.DS_Store
+*.log
+*.swo
+*.swp
+
+# Maven (for apartment-manager-api)
+apartment-manager-api/target/
+apartment-manager-api/.mvn/
+apartment-manager-api/*.iml
+apartment-manager-api/HELP.md 
+# If mvnw scripts are not meant to be in repo (usually they are)
+# apartment-manager-api/mvnw
+# apartment-manager-api/mvnw.cmd
+
+# Node / Angular (for apartment-manager-ui)
+apartment-manager-ui/node_modules/
+apartment-manager-ui/dist/
+apartment-manager-ui/.angular/
+apartment-manager-ui/npm-debug.log*
+apartment-manager-ui/coverage/
+apartment-manager-ui/browserslist # If generated
+
+# IDE specific
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
