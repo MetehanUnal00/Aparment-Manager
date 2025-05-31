@@ -42,14 +42,14 @@ public class SignupRequest {
      * User's first name (optional)
      */
     @Size(max = 50, message = "First name cannot exceed 50 characters")
-    @Pattern(regexp = "^[a-zA-Z\\s-]*$", message = "First name can only contain letters, spaces, and hyphens")
+    @Pattern(regexp = "^[\\p{L}\\s-]*$", message = "First name can only contain letters, spaces, and hyphens")
     private String firstName;
 
     /**
      * User's last name (optional)
      */
     @Size(max = 50, message = "Last name cannot exceed 50 characters")
-    @Pattern(regexp = "^[a-zA-Z\\s-]*$", message = "Last name can only contain letters, spaces, and hyphens")
+    @Pattern(regexp = "^[\\p{L}\\s-]*$", message = "Last name can only contain letters, spaces, and hyphens")
     private String lastName;
 
     // For simplicity, we'll assign a default role or handle role assignment separately.

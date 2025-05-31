@@ -2,6 +2,7 @@ package com.example.apartmentmanagerapi.controller;
 
 import com.example.apartmentmanagerapi.dto.ExpenseRequest;
 import com.example.apartmentmanagerapi.dto.ExpenseResponse;
+import com.example.apartmentmanagerapi.dto.MessageResponse;
 import com.example.apartmentmanagerapi.entity.ApartmentBuilding;
 import com.example.apartmentmanagerapi.entity.Expense;
 import com.example.apartmentmanagerapi.entity.User;
@@ -10,6 +11,15 @@ import com.example.apartmentmanagerapi.repository.ApartmentBuildingRepository;
 import com.example.apartmentmanagerapi.repository.ExpenseRepository;
 import com.example.apartmentmanagerapi.repository.UserRepository;
 import com.example.apartmentmanagerapi.service.IExpenseService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +43,8 @@ import java.util.stream.Collectors;
  * Provides endpoints for tracking, categorizing, and analyzing expenses.
  * Supports expense distribution to flats and trend analysis.
  */
+@Tag(name = "Expenses", description = "Manage building expenses, categories, and distribution")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/expenses")
 @RequiredArgsConstructor
@@ -46,19 +58,41 @@ public class ExpenseController {
     private final ExpenseRepository expenseRepository;
     private final ExpenseMapper expenseMapper;
     
-    /**
-     * Create a new expense for a building.
-     * Optionally distributes the expense to all flats.
-     * 
-     * @param request Expense creation request
-     * @param authentication Current user authentication
-     * @return Created expense details
-     */
+    @Operation(
+        summary = "Create expense",
+        description = "Records a new expense for a building. Optionally distributes the expense equally among all active flats. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "201",
+            description = "Expense created successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ExpenseResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors or building not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ExpenseResponse> createExpense(
             @Valid @RequestBody ExpenseRequest request,
-            Authentication authentication) {
+            @Parameter(hidden = true) Authentication authentication) {
         
         log.info("Creating expense for building ID: {} with amount: {} in category: {}", 
                 request.getBuildingId(), request.getAmount(), request.getCategory());
@@ -84,19 +118,36 @@ public class ExpenseController {
                 .body(expenseMapper.toResponse(createdExpense));
     }
     
-    /**
-     * Get expenses for a building within a date range.
-     * 
-     * @param buildingId ID of the building
-     * @param startDate Start date (optional)
-     * @param endDate End date (optional)
-     * @return List of expenses
-     */
+    @Operation(
+        summary = "Get expenses by building",
+        description = "Retrieves all expenses for a building within a date range. Defaults to current month if dates not provided. Requires ADMIN, MANAGER, or VIEWER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Expenses retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = ExpenseResponse.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/building/{buildingId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'VIEWER')")
     public ResponseEntity<List<ExpenseResponse>> getExpensesByBuilding(
+            @Parameter(description = "ID of the building", required = true)
             @PathVariable Long buildingId,
+            @Parameter(description = "Start date for filtering (defaults to first day of current month)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @Parameter(description = "End date for filtering (defaults to today)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         
         log.info("Retrieving expenses for building ID: {} between {} and {}", 
@@ -120,17 +171,34 @@ public class ExpenseController {
         return ResponseEntity.ok(responses);
     }
     
-    /**
-     * Get expenses by category for a building.
-     * 
-     * @param buildingId ID of the building
-     * @param category Expense category
-     * @return List of expenses in the category
-     */
+    @Operation(
+        summary = "Get expenses by category",
+        description = "Retrieves all expenses for a specific category in a building. Requires ADMIN, MANAGER, or VIEWER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Expenses retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = ExpenseResponse.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/building/{buildingId}/category/{category}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'VIEWER')")
     public ResponseEntity<List<ExpenseResponse>> getExpensesByCategory(
+            @Parameter(description = "ID of the building", required = true)
             @PathVariable Long buildingId,
+            @Parameter(description = "Expense category", required = true)
             @PathVariable Expense.ExpenseCategory category) {
         
         log.info("Retrieving expenses for building ID: {} in category: {}", buildingId, category);
@@ -143,19 +211,36 @@ public class ExpenseController {
         return ResponseEntity.ok(responses);
     }
     
-    /**
-     * Get expense breakdown by category for a building.
-     * 
-     * @param buildingId ID of the building
-     * @param startDate Start date (optional)
-     * @param endDate End date (optional)
-     * @return Category breakdown with totals
-     */
+    @Operation(
+        summary = "Get expense breakdown",
+        description = "Provides expense breakdown by category with totals for a building. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Expense breakdown retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = Map.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/building/{buildingId}/breakdown")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Map<String, Object>> getExpenseBreakdown(
+            @Parameter(description = "ID of the building", required = true)
             @PathVariable Long buildingId,
+            @Parameter(description = "Start date for breakdown (defaults to first day of current month)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @Parameter(description = "End date for breakdown (defaults to today)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         
         log.info("Getting expense breakdown for building ID: {}", buildingId);
@@ -193,17 +278,34 @@ public class ExpenseController {
         return ResponseEntity.ok(response);
     }
     
-    /**
-     * Get monthly expense trends for a building.
-     * 
-     * @param buildingId ID of the building
-     * @param months Number of months to analyze (default 6)
-     * @return Monthly expense totals
-     */
+    @Operation(
+        summary = "Get monthly expense trends",
+        description = "Analyzes monthly expense trends with totals and averages. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Monthly trends retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = Map.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/building/{buildingId}/monthly-trends")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Map<String, Object>> getMonthlyTrends(
+            @Parameter(description = "ID of the building", required = true)
             @PathVariable Long buildingId,
+            @Parameter(description = "Number of months to analyze", example = "6")
             @RequestParam(defaultValue = "6") int months) {
         
         log.info("Getting monthly expense trends for building ID: {} for {} months", buildingId, months);
@@ -234,15 +336,33 @@ public class ExpenseController {
         return ResponseEntity.ok(response);
     }
     
-    /**
-     * Get recurring expenses for a building.
-     * 
-     * @param buildingId ID of the building
-     * @return List of recurring expenses
-     */
+    @Operation(
+        summary = "Get recurring expenses",
+        description = "Retrieves all expenses marked as recurring for a building. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Recurring expenses retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = ExpenseResponse.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/building/{buildingId}/recurring")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<List<ExpenseResponse>> getRecurringExpenses(@PathVariable Long buildingId) {
+    public ResponseEntity<List<ExpenseResponse>> getRecurringExpenses(
+            @Parameter(description = "ID of the building", required = true)
+            @PathVariable Long buildingId) {
         log.info("Retrieving recurring expenses for building ID: {}", buildingId);
         
         List<Expense> recurringExpenses = expenseService.getRecurringExpenses(buildingId);
@@ -253,17 +373,34 @@ public class ExpenseController {
         return ResponseEntity.ok(responses);
     }
     
-    /**
-     * Analyze expense trends comparing current and previous periods.
-     * 
-     * @param buildingId ID of the building
-     * @param periodDays Number of days in each period (default 30)
-     * @return Trend analysis results
-     */
+    @Operation(
+        summary = "Analyze expense trends",
+        description = "Compares expenses between current and previous periods to identify trends. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Trend analysis completed successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = Map.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/building/{buildingId}/trend-analysis")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Map<String, Object>> analyzeExpenseTrends(
+            @Parameter(description = "ID of the building", required = true)
             @PathVariable Long buildingId,
+            @Parameter(description = "Number of days in each comparison period", example = "30")
             @RequestParam(defaultValue = "30") int periodDays) {
         
         log.info("Analyzing expense trends for building ID: {} with period of {} days", 
@@ -274,17 +411,40 @@ public class ExpenseController {
         return ResponseEntity.ok(trends);
     }
     
-    /**
-     * Update an expense.
-     * Only ADMIN can update expenses.
-     * 
-     * @param expenseId ID of the expense to update
-     * @param request Update request
-     * @return Updated expense
-     */
+    @Operation(
+        summary = "Update expense",
+        description = "Updates an existing expense. Changes to amount after distribution may require manual adjustment of monthly dues. Requires ADMIN role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Expense updated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ExpenseResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors or expense not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have ADMIN role"
+        )
+    })
     @PutMapping("/{expenseId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ExpenseResponse> updateExpense(
+            @Parameter(description = "ID of the expense to update", required = true)
             @PathVariable Long expenseId,
             @Valid @RequestBody ExpenseRequest request) {
         
@@ -302,16 +462,37 @@ public class ExpenseController {
         return ResponseEntity.ok(expenseMapper.toResponse(updatedExpense));
     }
     
-    /**
-     * Delete an expense.
-     * Only ADMIN can delete expenses.
-     * 
-     * @param expenseId ID of the expense to delete
-     * @return No content
-     */
+    @Operation(
+        summary = "Delete expense",
+        description = "Deletes an expense. Associated monthly dues are not automatically deleted. Requires ADMIN role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "204",
+            description = "Expense deleted successfully"
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Expense not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have ADMIN role"
+        )
+    })
     @DeleteMapping("/{expenseId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteExpense(@PathVariable Long expenseId) {
+    public ResponseEntity<Void> deleteExpense(
+            @Parameter(description = "ID of the expense to delete", required = true)
+            @PathVariable Long expenseId) {
         log.info("Deleting expense ID: {}", expenseId);
         
         expenseService.deleteExpense(expenseId);

@@ -8,6 +8,13 @@ import com.example.apartmentmanagerapi.dto.SignupRequest;
 import com.example.apartmentmanagerapi.entity.User;
 import com.example.apartmentmanagerapi.repository.UserRepository;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +31,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 
+@Tag(name = "Authentication", description = "Authentication endpoints for user login and registration")
 @CrossOrigin(origins = "*", maxAge = 3600) // Allow all origins for now
 @RestController
 @RequestMapping("/api/auth")
@@ -41,6 +49,37 @@ public class AuthController {
     @Autowired
     JwtUtil jwtUtil;
 
+    @Operation(
+        summary = "User Login",
+        description = "Authenticates a user and returns a JWT token for API access"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Login successful",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = JwtResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Invalid credentials",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        )
+    })
+    @SecurityRequirements // No security required for login endpoint
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
@@ -72,6 +111,29 @@ public class AuthController {
             userDetails.getAuthorities()));
     }
 
+    @Operation(
+        summary = "User Registration",
+        description = "Registers a new user account. New users are assigned VIEWER role by default."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Registration successful",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - username/email already exists or validation errors",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        )
+    })
+    @SecurityRequirements // No security required for registration endpoint
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {

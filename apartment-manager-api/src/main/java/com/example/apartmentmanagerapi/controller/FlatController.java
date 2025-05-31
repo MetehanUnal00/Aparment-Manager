@@ -4,6 +4,15 @@ import com.example.apartmentmanagerapi.dto.FlatRequest;
 import com.example.apartmentmanagerapi.dto.FlatResponse;
 import com.example.apartmentmanagerapi.dto.MessageResponse;
 import com.example.apartmentmanagerapi.service.IFlatService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Flats", description = "Manage flats within apartment buildings")
+@SecurityRequirement(name = "bearerAuth")
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/apartment-buildings/{buildingId}/flats")
@@ -21,9 +32,42 @@ public class FlatController {
 
     private final IFlatService flatService;
 
+    @Operation(
+        summary = "Create a new flat",
+        description = "Creates a new flat in the specified apartment building. Requires MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Flat created successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = FlatResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors or flat number already exists",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have MANAGER role"
+        )
+    })
     @PostMapping
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<?> createFlat(@PathVariable Long buildingId, @Valid @RequestBody FlatRequest request) {
+    public ResponseEntity<?> createFlat(
+            @Parameter(description = "ID of the apartment building", required = true)
+            @PathVariable Long buildingId,
+            @Valid @RequestBody FlatRequest request) {
         // Ensure the request's buildingId matches the path variable for consistency,
         // or rely on the service to use the path variable primarily.
         if (!buildingId.equals(request.getApartmentBuildingId())) {
@@ -39,9 +83,41 @@ public class FlatController {
         }
     }
 
+    @Operation(
+        summary = "Get all flats in a building",
+        description = "Retrieves all flats in the specified apartment building. Requires MANAGER or TENANT role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "List of flats retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = FlatResponse.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Building not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping
     @PreAuthorize("hasRole('MANAGER') or hasRole('TENANT')") // Tenants might view flats in their building
-    public ResponseEntity<?> getAllFlatsByBuilding(@PathVariable Long buildingId) {
+    public ResponseEntity<?> getAllFlatsByBuilding(
+            @Parameter(description = "ID of the apartment building", required = true)
+            @PathVariable Long buildingId) {
          try {
             List<FlatResponse> flats = flatService.getAllFlatsByBuildingId(buildingId);
             return ResponseEntity.ok(flats);
@@ -50,9 +126,43 @@ public class FlatController {
         }
     }
 
+    @Operation(
+        summary = "Get flat by ID",
+        description = "Retrieves a specific flat by its ID. Requires MANAGER or TENANT role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Flat retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = FlatResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Flat not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/{flatId}")
     @PreAuthorize("hasRole('MANAGER') or hasRole('TENANT')") // Tenant might view their specific flat
-    public ResponseEntity<?> getFlatById(@PathVariable Long buildingId, @PathVariable Long flatId) {
+    public ResponseEntity<?> getFlatById(
+            @Parameter(description = "ID of the apartment building", required = true)
+            @PathVariable Long buildingId,
+            @Parameter(description = "ID of the flat", required = true)
+            @PathVariable Long flatId) {
         try {
             FlatResponse response = flatService.getFlatById(buildingId, flatId);
             return ResponseEntity.ok(response);
@@ -61,9 +171,44 @@ public class FlatController {
         }
     }
 
+    @Operation(
+        summary = "Update flat",
+        description = "Updates an existing flat's information. Requires MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Flat updated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = FlatResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors, flat not found, or building ID mismatch",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have MANAGER role"
+        )
+    })
     @PutMapping("/{flatId}")
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<?> updateFlat(@PathVariable Long buildingId, @PathVariable Long flatId, @Valid @RequestBody FlatRequest request) {
+    public ResponseEntity<?> updateFlat(
+            @Parameter(description = "ID of the apartment building", required = true)
+            @PathVariable Long buildingId,
+            @Parameter(description = "ID of the flat to update", required = true)
+            @PathVariable Long flatId,
+            @Valid @RequestBody FlatRequest request) {
          if (!buildingId.equals(request.getApartmentBuildingId())) {
             // As in POST, ensure consistency or decide which ID takes precedence.
             // Forcing the request to align with the path for updates makes sense.
@@ -80,9 +225,43 @@ public class FlatController {
         }
     }
 
+    @Operation(
+        summary = "Delete flat",
+        description = "Deletes a flat from the building. Requires MANAGER role. Note: Consider using deactivate instead for audit trail."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Flat deleted successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Flat not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have MANAGER role"
+        )
+    })
     @DeleteMapping("/{flatId}")
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<?> deleteFlat(@PathVariable Long buildingId, @PathVariable Long flatId) {
+    public ResponseEntity<?> deleteFlat(
+            @Parameter(description = "ID of the apartment building", required = true)
+            @PathVariable Long buildingId,
+            @Parameter(description = "ID of the flat to delete", required = true)
+            @PathVariable Long flatId) {
         try {
             flatService.deleteFlat(buildingId, flatId);
             return ResponseEntity.ok(new MessageResponse("Flat deleted successfully!"));
@@ -91,12 +270,41 @@ public class FlatController {
         }
     }
     
-    /**
-     * Get active flats only
-     */
+    @Operation(
+        summary = "Get active flats",
+        description = "Retrieves only active flats in the building (isActive=true). Requires MANAGER or ADMIN role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Active flats retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = FlatResponse.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Building not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/active")
     @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
-    public ResponseEntity<?> getActiveFlatsByBuilding(@PathVariable Long buildingId) {
+    public ResponseEntity<?> getActiveFlatsByBuilding(
+            @Parameter(description = "ID of the apartment building", required = true)
+            @PathVariable Long buildingId) {
         try {
             List<FlatResponse> flats = flatService.getActiveFlatsByBuildingId(buildingId);
             return ResponseEntity.ok(flats);
@@ -105,12 +313,43 @@ public class FlatController {
         }
     }
     
-    /**
-     * Get flat with financial information
-     */
+    @Operation(
+        summary = "Get flat with financial information",
+        description = "Retrieves comprehensive financial information for a flat including balance, payments, and dues. Requires MANAGER or ADMIN role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Financial information retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = Map.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Flat not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/{flatId}/financial-info")
     @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
-    public ResponseEntity<?> getFlatWithFinancialInfo(@PathVariable Long buildingId, @PathVariable Long flatId) {
+    public ResponseEntity<?> getFlatWithFinancialInfo(
+            @Parameter(description = "ID of the apartment building", required = true)
+            @PathVariable Long buildingId,
+            @Parameter(description = "ID of the flat", required = true)
+            @PathVariable Long flatId) {
         try {
             Map<String, Object> flatInfo = flatService.getFlatWithFinancialInfo(buildingId, flatId);
             return ResponseEntity.ok(flatInfo);
@@ -119,13 +358,44 @@ public class FlatController {
         }
     }
     
-    /**
-     * Update tenant information only
-     */
+    @Operation(
+        summary = "Update tenant information",
+        description = "Updates only the tenant-related information for a flat. Requires MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Tenant information updated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = FlatResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors or flat not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have MANAGER role"
+        )
+    })
     @PutMapping("/{flatId}/tenant")
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<?> updateTenantInfo(@PathVariable Long buildingId, @PathVariable Long flatId, 
-                                               @Valid @RequestBody FlatRequest request) {
+    public ResponseEntity<?> updateTenantInfo(
+            @Parameter(description = "ID of the apartment building", required = true)
+            @PathVariable Long buildingId,
+            @Parameter(description = "ID of the flat", required = true)
+            @PathVariable Long flatId,
+            @Valid @RequestBody FlatRequest request) {
         try {
             FlatResponse response = flatService.updateTenantInfo(buildingId, flatId, request);
             return ResponseEntity.ok(response);
@@ -134,12 +404,43 @@ public class FlatController {
         }
     }
     
-    /**
-     * Deactivate a flat
-     */
+    @Operation(
+        summary = "Deactivate a flat",
+        description = "Marks a flat as inactive (soft delete). Inactive flats won't be included in monthly due generation. Requires MANAGER or ADMIN role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Flat deactivated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = FlatResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Flat not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @PutMapping("/{flatId}/deactivate")
     @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
-    public ResponseEntity<?> deactivateFlat(@PathVariable Long buildingId, @PathVariable Long flatId) {
+    public ResponseEntity<?> deactivateFlat(
+            @Parameter(description = "ID of the apartment building", required = true)
+            @PathVariable Long buildingId,
+            @Parameter(description = "ID of the flat to deactivate", required = true)
+            @PathVariable Long flatId) {
         try {
             FlatResponse response = flatService.deactivateFlat(buildingId, flatId);
             return ResponseEntity.ok(response);

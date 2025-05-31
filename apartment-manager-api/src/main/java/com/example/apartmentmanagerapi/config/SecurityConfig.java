@@ -74,8 +74,12 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll() // Allow auth endpoints
                 .requestMatchers("/public/**").permitAll() // Example for other public endpoints
-                // Add other public endpoints like swagger if you use it
-                // .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() 
+                // OpenAPI/Swagger endpoints
+                .requestMatchers("/api-docs/**").permitAll() // OpenAPI spec
+                .requestMatchers("/swagger-ui/**").permitAll() // Swagger UI resources
+                .requestMatchers("/swagger-ui.html").permitAll() // Swagger UI HTML
+                .requestMatchers("/v3/api-docs/**").permitAll() // OpenAPI 3 spec
+                .requestMatchers("/webjars/**").permitAll() // Swagger UI webjars
                 .anyRequest().authenticated() // All other requests need authentication
             );
 

@@ -2,12 +2,22 @@ package com.example.apartmentmanagerapi.controller;
 
 import com.example.apartmentmanagerapi.dto.MonthlyDueRequest;
 import com.example.apartmentmanagerapi.dto.MonthlyDueResponse;
+import com.example.apartmentmanagerapi.dto.MessageResponse;
 import com.example.apartmentmanagerapi.entity.Flat;
 import com.example.apartmentmanagerapi.entity.MonthlyDue;
 import com.example.apartmentmanagerapi.mapper.MonthlyDueMapper;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
 import com.example.apartmentmanagerapi.repository.MonthlyDueRepository;
 import com.example.apartmentmanagerapi.service.IMonthlyDueService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +39,8 @@ import java.util.stream.Collectors;
  * Provides endpoints for creating, retrieving, and managing monthly dues for flats.
  * Includes bulk operations and debtor management features.
  */
+@Tag(name = "Monthly Dues", description = "Manage monthly dues, debtor tracking, and bulk due generation")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/monthly-dues")
 @RequiredArgsConstructor
@@ -41,13 +53,36 @@ public class MonthlyDueController {
     private final MonthlyDueRepository monthlyDueRepository;
     private final MonthlyDueMapper monthlyDueMapper;
     
-    /**
-     * Generate monthly dues for all flats in a building.
-     * Only ADMIN and MANAGER roles can generate dues.
-     * 
-     * @param request Monthly due generation request
-     * @return List of created monthly dues
-     */
+    @Operation(
+        summary = "Generate monthly dues",
+        description = "Generates monthly dues for all active flats in a building. Idempotent operation - duplicate dues are skipped. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "201",
+            description = "Monthly dues generated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = MonthlyDueResponse.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors or building not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @PostMapping("/generate")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<List<MonthlyDueResponse>> generateMonthlyDues(
@@ -70,13 +105,40 @@ public class MonthlyDueController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responses);
     }
     
-    /**
-     * Create a single monthly due for a specific flat.
-     * Used for custom charges or adjustments.
-     * 
-     * @param request Monthly due creation request
-     * @return Created monthly due
-     */
+    @Operation(
+        summary = "Create single monthly due",
+        description = "Creates a single monthly due for a specific flat. Used for custom charges or adjustments. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "201",
+            description = "Monthly due created successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MonthlyDueResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors or flat not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        ),
+        @ApiResponse(
+            responseCode = "409",
+            description = "Conflict - Due already exists for this flat and date"
+        )
+    })
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<MonthlyDueResponse> createMonthlyDue(
@@ -99,15 +161,33 @@ public class MonthlyDueController {
                 .body(monthlyDueMapper.toResponse(createdDue));
     }
     
-    /**
-     * Get monthly dues for a specific flat.
-     * 
-     * @param flatId ID of the flat
-     * @return List of monthly dues
-     */
+    @Operation(
+        summary = "Get monthly dues by flat",
+        description = "Retrieves all monthly dues for a specific flat, ordered by due date descending. Requires ADMIN, MANAGER, or VIEWER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Monthly dues retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = MonthlyDueResponse.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/flat/{flatId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'VIEWER')")
-    public ResponseEntity<List<MonthlyDueResponse>> getMonthlyDuesByFlat(@PathVariable Long flatId) {
+    public ResponseEntity<List<MonthlyDueResponse>> getMonthlyDuesByFlat(
+            @Parameter(description = "ID of the flat", required = true)
+            @PathVariable Long flatId) {
         log.info("Retrieving monthly dues for flat ID: {}", flatId);
         
         List<MonthlyDue> dues = monthlyDueService.getMonthlyDuesByFlat(flatId);
@@ -118,16 +198,33 @@ public class MonthlyDueController {
         return ResponseEntity.ok(responses);
     }
     
-    /**
-     * Get debtors list for a building.
-     * Returns flats with overdue payments.
-     * 
-     * @param buildingId ID of the building
-     * @return List of debtors with their debt details
-     */
+    @Operation(
+        summary = "Get debtors list",
+        description = "Retrieves list of flats with overdue payments and their total debt amounts. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Debtors list retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = Map.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/building/{buildingId}/debtors")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<List<Map<String, Object>>> getDebtorsByBuilding(@PathVariable Long buildingId) {
+    public ResponseEntity<List<Map<String, Object>>> getDebtorsByBuilding(
+            @Parameter(description = "ID of the building", required = true)
+            @PathVariable Long buildingId) {
         log.info("Retrieving debtors for building ID: {}", buildingId);
         
         Map<Flat, BigDecimal> debtorDetails = monthlyDueService.getDebtorDetailsForBuilding(buildingId);
@@ -147,15 +244,33 @@ public class MonthlyDueController {
         return ResponseEntity.ok(debtorList);
     }
     
-    /**
-     * Get overdue dues for a building.
-     * 
-     * @param buildingId ID of the building
-     * @return List of overdue monthly dues
-     */
+    @Operation(
+        summary = "Get overdue dues",
+        description = "Retrieves all monthly dues with OVERDUE status for a building. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Overdue dues retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = MonthlyDueResponse.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/building/{buildingId}/overdue")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<List<MonthlyDueResponse>> getOverdueDuesByBuilding(@PathVariable Long buildingId) {
+    public ResponseEntity<List<MonthlyDueResponse>> getOverdueDuesByBuilding(
+            @Parameter(description = "ID of the building", required = true)
+            @PathVariable Long buildingId) {
         log.info("Retrieving overdue dues for building ID: {}", buildingId);
         
         List<MonthlyDue> overdueDues = monthlyDueService.getOverdueDuesByBuilding(buildingId);
@@ -166,19 +281,36 @@ public class MonthlyDueController {
         return ResponseEntity.ok(responses);
     }
     
-    /**
-     * Get collection rate statistics for a building.
-     * 
-     * @param buildingId ID of the building
-     * @param startDate Start date (optional)
-     * @param endDate End date (optional)
-     * @return Collection rate statistics
-     */
+    @Operation(
+        summary = "Get collection rate",
+        description = "Calculates the percentage of monthly dues collected for a building within a date range. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Collection rate calculated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = Map.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
     @GetMapping("/building/{buildingId}/collection-rate")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Map<String, Object>> getCollectionRate(
+            @Parameter(description = "ID of the building", required = true)
             @PathVariable Long buildingId,
+            @Parameter(description = "Start date for collection rate calculation (defaults to first day of current month)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @Parameter(description = "End date for collection rate calculation (defaults to today)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         
         log.info("Calculating collection rate for building ID: {}", buildingId);
@@ -202,17 +334,40 @@ public class MonthlyDueController {
         return ResponseEntity.ok(statistics);
     }
     
-    /**
-     * Update a monthly due.
-     * Only ADMIN can update dues.
-     * 
-     * @param dueId ID of the monthly due to update
-     * @param request Update request
-     * @return Updated monthly due
-     */
+    @Operation(
+        summary = "Update monthly due",
+        description = "Updates an existing monthly due's amount, description, or status. Requires ADMIN role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Monthly due updated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MonthlyDueResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors or monthly due not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have ADMIN role"
+        )
+    })
     @PutMapping("/{dueId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MonthlyDueResponse> updateMonthlyDue(
+            @Parameter(description = "ID of the monthly due to update", required = true)
             @PathVariable Long dueId,
             @Valid @RequestBody MonthlyDueRequest request) {
         
@@ -230,16 +385,45 @@ public class MonthlyDueController {
         return ResponseEntity.ok(monthlyDueMapper.toResponse(updatedDue));
     }
     
-    /**
-     * Cancel a monthly due.
-     * Only ADMIN can cancel dues.
-     * 
-     * @param dueId ID of the monthly due to cancel
-     * @return No content
-     */
+    @Operation(
+        summary = "Cancel monthly due",
+        description = "Sets a monthly due status to CANCELLED. Cannot cancel already paid dues. Requires ADMIN role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "204",
+            description = "Monthly due cancelled successfully"
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Cannot cancel a paid monthly due",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Monthly due not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have ADMIN role"
+        )
+    })
     @DeleteMapping("/{dueId}/cancel")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> cancelMonthlyDue(@PathVariable Long dueId) {
+    public ResponseEntity<Void> cancelMonthlyDue(
+            @Parameter(description = "ID of the monthly due to cancel", required = true)
+            @PathVariable Long dueId) {
         log.info("Cancelling monthly due ID: {}", dueId);
         
         monthlyDueService.cancelMonthlyDue(dueId);
@@ -247,12 +431,28 @@ public class MonthlyDueController {
         return ResponseEntity.noContent().build();
     }
     
-    /**
-     * Manually trigger overdue status update.
-     * Only ADMIN can trigger this operation.
-     * 
-     * @return Update statistics
-     */
+    @Operation(
+        summary = "Update overdue statuses",
+        description = "Manually triggers the scheduled task to update unpaid dues to OVERDUE status. Normally runs daily at 01:00. Requires ADMIN role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Overdue statuses updated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = Map.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have ADMIN role"
+        )
+    })
     @PostMapping("/update-overdue-statuses")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> updateOverdueStatuses() {

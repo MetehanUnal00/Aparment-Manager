@@ -4,6 +4,15 @@ import com.example.apartmentmanagerapi.dto.ApartmentBuildingRequest;
 import com.example.apartmentmanagerapi.dto.ApartmentBuildingResponse;
 import com.example.apartmentmanagerapi.dto.MessageResponse;
 import com.example.apartmentmanagerapi.service.IApartmentBuildingService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Apartment Buildings", description = "Manage apartment buildings")
+@SecurityRequirement(name = "bearerAuth")
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/apartment-buildings")
@@ -20,6 +31,36 @@ public class ApartmentBuildingController {
     @Autowired
     private IApartmentBuildingService apartmentBuildingService;
 
+    @Operation(
+        summary = "Create apartment building",
+        description = "Creates a new apartment building. Requires MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Building created successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApartmentBuildingResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors or building name already exists",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have MANAGER role"
+        )
+    })
     @PostMapping
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<?> createApartmentBuilding(@Valid @RequestBody ApartmentBuildingRequest request) {
@@ -31,6 +72,28 @@ public class ApartmentBuildingController {
         }
     }
 
+    @Operation(
+        summary = "Get all apartment buildings",
+        description = "Retrieves all apartment buildings. Requires MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "List of buildings retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = ApartmentBuildingResponse.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have MANAGER role"
+        )
+    })
     @GetMapping
     @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<List<ApartmentBuildingResponse>> getAllApartmentBuildings() {
@@ -38,9 +101,41 @@ public class ApartmentBuildingController {
         return ResponseEntity.ok(buildings);
     }
 
+    @Operation(
+        summary = "Get apartment building by ID",
+        description = "Retrieves a specific apartment building by its ID. Requires MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Building retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApartmentBuildingResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Building not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have MANAGER role"
+        )
+    })
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<?> getApartmentBuildingById(@PathVariable Long id) {
+    public ResponseEntity<?> getApartmentBuildingById(
+            @Parameter(description = "ID of the apartment building", required = true)
+            @PathVariable Long id) {
         try {
             ApartmentBuildingResponse response = apartmentBuildingService.getApartmentBuildingById(id);
             return ResponseEntity.ok(response);
@@ -49,9 +144,42 @@ public class ApartmentBuildingController {
         }
     }
 
+    @Operation(
+        summary = "Update apartment building",
+        description = "Updates an existing apartment building. Requires MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Building updated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApartmentBuildingResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - validation errors, building not found, or new name already exists",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have MANAGER role"
+        )
+    })
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<?> updateApartmentBuilding(@PathVariable Long id, @Valid @RequestBody ApartmentBuildingRequest request) {
+    public ResponseEntity<?> updateApartmentBuilding(
+            @Parameter(description = "ID of the apartment building to update", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody ApartmentBuildingRequest request) {
         try {
             ApartmentBuildingResponse response = apartmentBuildingService.updateApartmentBuilding(id, request);
             return ResponseEntity.ok(response);
@@ -60,9 +188,41 @@ public class ApartmentBuildingController {
         }
     }
 
+    @Operation(
+        summary = "Delete apartment building",
+        description = "Deletes an apartment building. Requires MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Building deleted successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Building not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MessageResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have MANAGER role"
+        )
+    })
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<?> deleteApartmentBuilding(@PathVariable Long id) {
+    public ResponseEntity<?> deleteApartmentBuilding(
+            @Parameter(description = "ID of the apartment building to delete", required = true)
+            @PathVariable Long id) {
         try {
             apartmentBuildingService.deleteApartmentBuilding(id);
             return ResponseEntity.ok(new MessageResponse("Apartment building deleted successfully!"));
