@@ -4,11 +4,13 @@ import com.example.apartmentmanagerapi.entity.ApartmentBuilding;
 import com.example.apartmentmanagerapi.entity.Flat;
 import com.example.apartmentmanagerapi.dto.FlatRequest;
 import com.example.apartmentmanagerapi.dto.FlatResponse;
+import com.example.apartmentmanagerapi.event.FlatCreatedEvent;
 import com.example.apartmentmanagerapi.mapper.FlatMapper;
 import com.example.apartmentmanagerapi.repository.ApartmentBuildingRepository;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class FlatService implements IFlatService {
     private final PaymentService paymentService;
     private final MonthlyDueService monthlyDueService;
     private final FlatMapper flatMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public FlatResponse createFlat(FlatRequest request) {
@@ -49,6 +52,18 @@ public class FlatService implements IFlatService {
         
         // Save the flat entity
         Flat savedFlat = flatRepository.save(flat);
+        
+        // Publish flat created event
+        FlatCreatedEvent event = new FlatCreatedEvent(
+            this,
+            savedFlat.getId(),
+            savedFlat.getApartmentBuilding().getId(),
+            savedFlat.getFlatNumber(),
+            savedFlat.getTenantEmail(),
+            savedFlat.getTenantName()
+        );
+        eventPublisher.publishEvent(event);
+        log.debug("Published FlatCreatedEvent for flat {}", savedFlat.getId());
         
         // Map entity to response and return
         return flatMapper.toResponse(savedFlat);

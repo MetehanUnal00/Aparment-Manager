@@ -3,11 +3,13 @@ package com.example.apartmentmanagerapi.service;
 import com.example.apartmentmanagerapi.entity.Flat;
 import com.example.apartmentmanagerapi.entity.Payment;
 import com.example.apartmentmanagerapi.entity.MonthlyDue;
+import com.example.apartmentmanagerapi.event.PaymentRecordedEvent;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
 import com.example.apartmentmanagerapi.repository.PaymentRepository;
 import com.example.apartmentmanagerapi.repository.MonthlyDueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class PaymentService implements IPaymentService {
     private final PaymentRepository paymentRepository;
     private final FlatRepository flatRepository;
     private final MonthlyDueRepository monthlyDueRepository;
+    private final ApplicationEventPublisher eventPublisher;
     
     /**
      * Creates a new payment for a flat.
@@ -64,6 +67,20 @@ public class PaymentService implements IPaymentService {
         
         // Auto-allocate payment to oldest unpaid monthly dues
         allocatePaymentToDues(savedPayment);
+        
+        // Publish payment recorded event
+        PaymentRecordedEvent event = new PaymentRecordedEvent(
+            this,
+            savedPayment.getId(),
+            flat.getId(),
+            flat.getApartmentBuilding().getId(),
+            savedPayment.getAmount(),
+            savedPayment.getPaymentDate(),
+            flat.getTenantName(),
+            flat.getTenantEmail()
+        );
+        eventPublisher.publishEvent(event);
+        log.debug("Published PaymentRecordedEvent for payment {}", savedPayment.getId());
         
         log.info("Payment created successfully with ID: {}", savedPayment.getId());
         return savedPayment;

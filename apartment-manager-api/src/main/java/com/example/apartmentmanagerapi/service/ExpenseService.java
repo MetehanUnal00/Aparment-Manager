@@ -4,11 +4,13 @@ import com.example.apartmentmanagerapi.entity.ApartmentBuilding;
 import com.example.apartmentmanagerapi.entity.Expense;
 import com.example.apartmentmanagerapi.entity.Flat;
 import com.example.apartmentmanagerapi.entity.MonthlyDue;
+import com.example.apartmentmanagerapi.event.ExpenseRecordedEvent;
 import com.example.apartmentmanagerapi.repository.ApartmentBuildingRepository;
 import com.example.apartmentmanagerapi.repository.ExpenseRepository;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class ExpenseService implements IExpenseService {
     private final ApartmentBuildingRepository apartmentBuildingRepository;
     private final FlatRepository flatRepository;
     private final MonthlyDueService monthlyDueService;
+    private final ApplicationEventPublisher eventPublisher;
     
     /**
      * Creates a new expense for a building.
@@ -64,6 +67,20 @@ public class ExpenseService implements IExpenseService {
         if (distributeToFlats) {
             distributeExpenseToFlats(savedExpense);
         }
+        
+        // Publish expense recorded event
+        ExpenseRecordedEvent event = new ExpenseRecordedEvent(
+            this,
+            savedExpense.getId(),
+            building.getId(),
+            savedExpense.getAmount(),
+            savedExpense.getCategory(),
+            savedExpense.getExpenseDate(),
+            savedExpense.getIsRecurring(),
+            distributeToFlats
+        );
+        eventPublisher.publishEvent(event);
+        log.debug("Published ExpenseRecordedEvent for expense {}", savedExpense.getId());
         
         log.info("Expense created successfully with ID: {}", savedExpense.getId());
         return savedExpense;

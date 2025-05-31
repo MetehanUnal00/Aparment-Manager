@@ -3,11 +3,13 @@ package com.example.apartmentmanagerapi.service;
 import com.example.apartmentmanagerapi.entity.ApartmentBuilding;
 import com.example.apartmentmanagerapi.entity.Flat;
 import com.example.apartmentmanagerapi.entity.MonthlyDue;
+import com.example.apartmentmanagerapi.event.MonthlyDuesGeneratedEvent;
 import com.example.apartmentmanagerapi.repository.ApartmentBuildingRepository;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
 import com.example.apartmentmanagerapi.repository.MonthlyDueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class MonthlyDueService implements IMonthlyDueService {
     private final MonthlyDueRepository monthlyDueRepository;
     private final FlatRepository flatRepository;
     private final ApartmentBuildingRepository apartmentBuildingRepository;
+    private final ApplicationEventPublisher eventPublisher;
     
     /**
      * Generates monthly dues for all active flats in a building.
@@ -87,6 +90,20 @@ public class MonthlyDueService implements IMonthlyDueService {
         
         log.info("Generated {} monthly dues for building ID: {} ({} skipped as duplicates)", 
                 createdDues.size(), buildingId, skippedCount);
+        
+        // Publish event if dues were generated
+        if (!createdDues.isEmpty()) {
+            MonthlyDuesGeneratedEvent event = new MonthlyDuesGeneratedEvent(
+                this,
+                buildingId,
+                dueDate.getYear(),
+                dueDate.getMonthValue(),
+                createdDues.size(),
+                dueDate
+            );
+            eventPublisher.publishEvent(event);
+            log.debug("Published MonthlyDuesGeneratedEvent for building {}", buildingId);
+        }
         
         return createdDues;
     }
