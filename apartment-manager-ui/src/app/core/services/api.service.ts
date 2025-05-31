@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, retry, timeout } from 'rxjs/operators';
+import { Observable, throwError, timer } from 'rxjs';
+import { catchError, retry, timeout, retryWhen, mergeMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -32,8 +32,7 @@ export class ApiService {
       timeout(this.defaultTimeout),
       retry({
         count: this.retryAttempts,
-        delay: this.retryDelay,
-        resetOnSuccess: true
+        delay: this.retryDelay
       }),
       catchError(this.handleError)
     );
@@ -50,12 +49,21 @@ export class ApiService {
     const url = `${this.apiUrl}${endpoint}`;
     return this.http.post<T>(url, body, { headers }).pipe(
       timeout(this.defaultTimeout),
-      retry({
-        count: this.retryAttempts,
-        delay: this.retryDelay,
-        resetOnSuccess: true,
-        excludedStatusCodes: [400, 401, 403, 404, 409] // Don't retry client errors
-      }),
+      retryWhen(errors =>
+        errors.pipe(
+          mergeMap((error, index) => {
+            // Don't retry client errors
+            if (error.status && [400, 401, 403, 404, 409].includes(error.status)) {
+              return throwError(() => error);
+            }
+            // Retry up to retryAttempts times
+            if (index < this.retryAttempts) {
+              return timer(this.retryDelay);
+            }
+            return throwError(() => error);
+          })
+        )
+      ),
       catchError(this.handleError)
     );
   }
@@ -71,12 +79,21 @@ export class ApiService {
     const url = `${this.apiUrl}${endpoint}`;
     return this.http.put<T>(url, body, { headers }).pipe(
       timeout(this.defaultTimeout),
-      retry({
-        count: this.retryAttempts,
-        delay: this.retryDelay,
-        resetOnSuccess: true,
-        excludedStatusCodes: [400, 401, 403, 404, 409]
-      }),
+      retryWhen(errors =>
+        errors.pipe(
+          mergeMap((error, index) => {
+            // Don't retry client errors
+            if (error.status && [400, 401, 403, 404, 409].includes(error.status)) {
+              return throwError(() => error);
+            }
+            // Retry up to retryAttempts times
+            if (index < this.retryAttempts) {
+              return timer(this.retryDelay);
+            }
+            return throwError(() => error);
+          })
+        )
+      ),
       catchError(this.handleError)
     );
   }
@@ -91,12 +108,21 @@ export class ApiService {
     const url = `${this.apiUrl}${endpoint}`;
     return this.http.delete<T>(url, { headers }).pipe(
       timeout(this.defaultTimeout),
-      retry({
-        count: this.retryAttempts,
-        delay: this.retryDelay,
-        resetOnSuccess: true,
-        excludedStatusCodes: [400, 401, 403, 404, 409]
-      }),
+      retryWhen(errors =>
+        errors.pipe(
+          mergeMap((error, index) => {
+            // Don't retry client errors
+            if (error.status && [400, 401, 403, 404, 409].includes(error.status)) {
+              return throwError(() => error);
+            }
+            // Retry up to retryAttempts times
+            if (index < this.retryAttempts) {
+              return timer(this.retryDelay);
+            }
+            return throwError(() => error);
+          })
+        )
+      ),
       catchError(this.handleError)
     );
   }
@@ -112,12 +138,21 @@ export class ApiService {
     const url = `${this.apiUrl}${endpoint}`;
     return this.http.patch<T>(url, body, { headers }).pipe(
       timeout(this.defaultTimeout),
-      retry({
-        count: this.retryAttempts,
-        delay: this.retryDelay,
-        resetOnSuccess: true,
-        excludedStatusCodes: [400, 401, 403, 404, 409]
-      }),
+      retryWhen(errors =>
+        errors.pipe(
+          mergeMap((error, index) => {
+            // Don't retry client errors
+            if (error.status && [400, 401, 403, 404, 409].includes(error.status)) {
+              return throwError(() => error);
+            }
+            // Retry up to retryAttempts times
+            if (index < this.retryAttempts) {
+              return timer(this.retryDelay);
+            }
+            return throwError(() => error);
+          })
+        )
+      ),
       catchError(this.handleError)
     );
   }

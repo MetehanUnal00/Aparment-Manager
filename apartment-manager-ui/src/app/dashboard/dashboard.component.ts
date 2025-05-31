@@ -3,6 +3,7 @@ import { AuthService } from '../auth/services/auth.service';
 import { Router, RouterLink, RouterOutlet, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ApartmentBuildingService } from '../shared/services/apartment-building.service';
+import { ApartmentBuildingResponse } from '../shared/models/apartment-building.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -46,13 +47,13 @@ export class DashboardComponent implements OnInit {
     console.log('Current user:', this.currentUser);
     console.log('Token:', this.authService.getToken());
     
-    this.buildingService.getAllBuildings().subscribe({
-      next: (buildings) => {
+    this.buildingService.getBuildings().subscribe({
+      next: (buildings: ApartmentBuildingResponse[]) => {
         console.log('Successfully fetched buildings:', buildings);
         this.buildings = buildings;
         this.loadingError = null;
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Failed to fetch buildings:', error);
         this.loadingError = `Failed to load buildings: ${error.status} ${error.statusText}`;
       }

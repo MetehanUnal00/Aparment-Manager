@@ -67,6 +67,14 @@ export interface DateRange {
 }
 
 /**
+ * Date range request with optional dates
+ */
+export interface DateRangeRequest {
+  startDate?: string;
+  endDate?: string;
+}
+
+/**
  * Generic ID reference
  */
 export interface IdReference {

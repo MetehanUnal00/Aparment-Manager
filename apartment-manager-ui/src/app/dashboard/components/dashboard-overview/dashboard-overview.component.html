@@ -1,34 +1,56 @@
 <div class="dashboard-overview">
   <!-- Loading State -->
-  <div *ngIf="loading" class="text-center py-5">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-    <p class="mt-2">Loading dashboard data...</p>
-  </div>
+  <app-loading-spinner 
+    *ngIf="loading" 
+    [text]="'Loading dashboard data...'"
+    [size]="'large'">
+  </app-loading-spinner>
 
-  <!-- Error State -->
-  <div *ngIf="!loading && errorMessage" class="alert alert-danger" role="alert">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    {{ errorMessage }}
-  </div>
+  <!-- Empty State -->
+  <app-empty-state
+    *ngIf="!loading && buildings.length === 0"
+    [title]="'No Buildings Found'"
+    [message]="'Start by adding your first apartment building.'"
+    [actionLabel]="'Add Building'"
+    [actionHandler]="navigateToAddBuilding"
+    [icon]="'building'">
+  </app-empty-state>
 
   <!-- Dashboard Content -->
-  <div *ngIf="!loading && !errorMessage">
-    <!-- Building Selector -->
-    <div class="row mb-4" *ngIf="buildings.length > 1">
-      <div class="col-md-4">
+  <div *ngIf="!loading && buildings.length > 0">
+    <!-- Header with Building Selector and Auto-refresh Toggle -->
+    <div class="row mb-4">
+      <div class="col-md-4" *ngIf="buildings.length > 1">
         <label for="buildingSelect" class="form-label">Select Building:</label>
         <select 
           id="buildingSelect" 
           class="form-select"
           [(ngModel)]="selectedBuildingId"
-          (change)="onBuildingChange($any($event.target).value)"
+          (change)="onBuildingChange($event)"
         >
           <option *ngFor="let building of buildings" [value]="building.id">
             {{ building.name }}
           </option>
         </select>
+      </div>
+      <div class="col-md-8 text-end">
+        <div class="btn-group" role="group">
+          <button 
+            type="button" 
+            class="btn btn-outline-primary"
+            [class.active]="autoRefreshEnabled"
+            (click)="toggleAutoRefresh()">
+            <i class="bi" [class.bi-pause-circle]="autoRefreshEnabled" [class.bi-play-circle]="!autoRefreshEnabled"></i>
+            {{ autoRefreshEnabled ? 'Pause Auto-refresh' : 'Enable Auto-refresh' }}
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-outline-secondary"
+            (click)="refreshData()">
+            <i class="bi bi-arrow-clockwise"></i>
+            Refresh Now
+          </button>
+        </div>
       </div>
     </div>
 
@@ -205,13 +227,13 @@
             <div class="expense-categories">
               <div *ngFor="let category of expenseCategories" class="mb-2">
                 <div class="d-flex justify-content-between align-items-center">
-                  <span>{{ category.category }}</span>
+                  <span>{{ getCategoryDisplayName(category.category) }}</span>
                   <span class="fw-bold">{{ formatCurrency(category.totalAmount) }}</span>
                 </div>
                 <div class="progress" style="height: 8px;">
                   <div 
                     class="progress-bar bg-info" 
-                    [style.width.%]="category.percentage"
+                    [style.width.%]="getExpenseCategoryPercentage(category)"
                   ></div>
                 </div>
               </div>
@@ -237,8 +259,11 @@
               <button class="btn btn-warning" routerLink="/dashboard/debtors">
                 <i class="bi bi-person-x me-2"></i>View Debtors
               </button>
-              <button class="btn btn-success" (click)="loadDashboardData()">
-                <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
+              <button class="btn btn-info" routerLink="/monthly-dues/generate">
+                <i class="bi bi-calendar-plus me-2"></i>Generate Monthly Dues
+              </button>
+              <button class="btn btn-secondary" routerLink="/reports">
+                <i class="bi bi-file-earmark-bar-graph me-2"></i>View Reports
               </button>
             </div>
           </div>

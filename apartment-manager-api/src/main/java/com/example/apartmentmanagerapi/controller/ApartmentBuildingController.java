@@ -33,7 +33,7 @@ public class ApartmentBuildingController {
 
     @Operation(
         summary = "Create apartment building",
-        description = "Creates a new apartment building. Requires MANAGER role."
+        description = "Creates a new apartment building. Requires MANAGER or ADMIN role."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -58,11 +58,11 @@ public class ApartmentBuildingController {
         ),
         @ApiResponse(
             responseCode = "403",
-            description = "Forbidden - User does not have MANAGER role"
+            description = "Forbidden - User does not have MANAGER or ADMIN role"
         )
     })
     @PostMapping
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<?> createApartmentBuilding(@Valid @RequestBody ApartmentBuildingRequest request) {
         try {
             ApartmentBuildingResponse response = apartmentBuildingService.createApartmentBuilding(request);
@@ -74,7 +74,7 @@ public class ApartmentBuildingController {
 
     @Operation(
         summary = "Get all apartment buildings",
-        description = "Retrieves all apartment buildings. Requires MANAGER role."
+        description = "Retrieves all apartment buildings. Requires MANAGER or ADMIN role."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -91,11 +91,11 @@ public class ApartmentBuildingController {
         ),
         @ApiResponse(
             responseCode = "403",
-            description = "Forbidden - User does not have MANAGER role"
+            description = "Forbidden - User does not have MANAGER or ADMIN role"
         )
     })
     @GetMapping
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<List<ApartmentBuildingResponse>> getAllApartmentBuildings() {
         List<ApartmentBuildingResponse> buildings = apartmentBuildingService.getAllApartmentBuildings();
         return ResponseEntity.ok(buildings);
@@ -103,7 +103,7 @@ public class ApartmentBuildingController {
 
     @Operation(
         summary = "Get apartment building by ID",
-        description = "Retrieves a specific apartment building by its ID. Requires MANAGER role."
+        description = "Retrieves a specific apartment building by its ID. Requires MANAGER or ADMIN role."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -128,11 +128,11 @@ public class ApartmentBuildingController {
         ),
         @ApiResponse(
             responseCode = "403",
-            description = "Forbidden - User does not have MANAGER role"
+            description = "Forbidden - User does not have MANAGER or ADMIN role"
         )
     })
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<?> getApartmentBuildingById(
             @Parameter(description = "ID of the apartment building", required = true)
             @PathVariable Long id) {
@@ -146,7 +146,7 @@ public class ApartmentBuildingController {
 
     @Operation(
         summary = "Update apartment building",
-        description = "Updates an existing apartment building. Requires MANAGER role."
+        description = "Updates an existing apartment building. Requires MANAGER or ADMIN role."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -171,11 +171,11 @@ public class ApartmentBuildingController {
         ),
         @ApiResponse(
             responseCode = "403",
-            description = "Forbidden - User does not have MANAGER role"
+            description = "Forbidden - User does not have MANAGER or ADMIN role"
         )
     })
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<?> updateApartmentBuilding(
             @Parameter(description = "ID of the apartment building to update", required = true)
             @PathVariable Long id,
@@ -190,7 +190,7 @@ public class ApartmentBuildingController {
 
     @Operation(
         summary = "Delete apartment building",
-        description = "Deletes an apartment building. Requires MANAGER role."
+        description = "Deletes an apartment building. Requires MANAGER or ADMIN role."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -215,11 +215,11 @@ public class ApartmentBuildingController {
         ),
         @ApiResponse(
             responseCode = "403",
-            description = "Forbidden - User does not have MANAGER role"
+            description = "Forbidden - User does not have MANAGER or ADMIN role"
         )
     })
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<?> deleteApartmentBuilding(
             @Parameter(description = "ID of the apartment building to delete", required = true)
             @PathVariable Long id) {

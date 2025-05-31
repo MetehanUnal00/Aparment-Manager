@@ -6,7 +6,7 @@ import { LoadingService } from '../../core/services/loading.service';
 import { 
   MonthlyDueResponse, 
   MonthlyDueRequest,
-  DebtorSummary,
+  DebtorInfo,
   OverdueSummary
 } from '../models/monthly-due.model';
 
@@ -28,7 +28,7 @@ export class MonthlyDueService {
   
   // Cache for debtor lists (5 minutes TTL due to frequent changes)
   private debtorCache = new Map<number, {
-    data$: Observable<DebtorSummary[]>;
+    data$: Observable<DebtorInfo[]>;
     time: number;
   }>();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -81,7 +81,7 @@ export class MonthlyDueService {
    * Get debtor report for a building
    * Uses caching to reduce API calls
    */
-  getDebtorReport(buildingId: number, forceRefresh = false): Observable<DebtorSummary[]> {
+  getDebtorReport(buildingId: number, forceRefresh = false): Observable<DebtorInfo[]> {
     // Check cache validity
     const cached = this.debtorCache.get(buildingId);
     if (!forceRefresh && cached && (Date.now() - cached.time) < this.CACHE_DURATION) {
@@ -89,11 +89,11 @@ export class MonthlyDueService {
     }
 
     // Create new cached observable
-    const debtors$ = this.api.get<DebtorSummary[]>(`${this.baseUrl}/debtors/${buildingId}`).pipe(
+    const debtors$ = this.api.get<DebtorInfo[]>(`${this.baseUrl}/debtors/${buildingId}`).pipe(
       tap(debtors => {
         console.log(`Debtor report for building ${buildingId}: ${debtors.length} debtors`);
         // Calculate total debt
-        const totalDebt = debtors.reduce((sum, d) => sum + d.totalAmount, 0);
+        const totalDebt = debtors.reduce((sum, d) => sum + d.totalDebt, 0);
         console.log(`Total debt: ${this.formatCurrency(totalDebt)}`);
       }),
       shareReplay(1)
@@ -110,14 +110,12 @@ export class MonthlyDueService {
 
   /**
    * Generate monthly dues for a building
-   * This can be a long operation, show loading indicator
+   * Loading state is automatically handled by the loading interceptor
    */
   generateMonthlyDues(request: MonthlyDueRequest): Observable<MonthlyDueResponse[]> {
     const buildingId = request.buildingId!;
     
-    return this.loading.withLoading(
-      this.api.post<MonthlyDueResponse[]>(`${this.baseUrl}/generate/${buildingId}`, request)
-    ).pipe(
+    return this.api.post<MonthlyDueResponse[]>(`${this.baseUrl}/generate/${buildingId}`, request).pipe(
       tap(dues => {
         this.notification.success(`Generated ${dues.length} monthly dues successfully`);
         this.invalidateBuildingCache(buildingId);
@@ -178,11 +176,10 @@ export class MonthlyDueService {
 
   /**
    * Send reminder emails to debtors
+   * Loading state is automatically handled by the loading interceptor
    */
   sendReminders(buildingId: number): Observable<{ sent: number; failed: number }> {
-    return this.loading.withLoading(
-      this.api.post<{ sent: number; failed: number }>(`${this.baseUrl}/reminders/${buildingId}`, {})
-    ).pipe(
+    return this.api.post<{ sent: number; failed: number }>(`${this.baseUrl}/reminders/${buildingId}`, {}).pipe(
       tap(result => {
         this.notification.success(`Sent ${result.sent} reminder emails successfully`);
         if (result.failed > 0) {

@@ -1,9 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
+import { Subject, timer, switchMap, takeUntil } from 'rxjs';
 import { ApartmentBuildingService } from '../../../shared/services/apartment-building.service';
-import { MonthlyDueService, DebtorInfo } from '../../../shared/services/monthly-due.service';
+import { MonthlyDueService } from '../../../shared/services/monthly-due.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { SearchBoxComponent } from '../../../shared/components/search-box/search-box.component';
+import { ApartmentBuildingResponse } from '../../../shared/models/apartment-building.model';
+import { DebtorInfo } from '../../../shared/models/monthly-due.model';
 
 /**
  * Component displaying list of debtors with overdue payments
@@ -13,25 +20,43 @@ import { MonthlyDueService, DebtorInfo } from '../../../shared/services/monthly-
 @Component({
   selector: 'app-debtor-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    RouterLink,
+    LoadingSpinnerComponent,
+    EmptyStateComponent,
+    SearchBoxComponent
+  ],
   templateUrl: './debtor-list.component.html',
   styleUrls: ['./debtor-list.component.scss']
 })
-export class DebtorListComponent implements OnInit {
+export class DebtorListComponent implements OnInit, OnDestroy {
+  // Inject services using the new inject() function
+  private readonly buildingService = inject(ApartmentBuildingService);
+  private readonly monthlyDueService = inject(MonthlyDueService);
+  private readonly notification = inject(NotificationService);
+  private readonly router = inject(Router);
+
+  /**
+   * Subject for component destruction
+   */
+  private readonly destroy$ = new Subject<void>();
+
   /**
    * Loading state indicator
    */
   loading = true;
 
   /**
-   * Error message if data loading fails
+   * Auto-refresh enabled state
    */
-  errorMessage = '';
+  autoRefreshEnabled = false;
 
   /**
    * List of buildings for selection
    */
-  buildings: any[] = [];
+  buildings: ApartmentBuildingResponse[] = [];
 
   /**
    * Currently selected building ID
@@ -56,7 +81,7 @@ export class DebtorListComponent implements OnInit {
   /**
    * Sort column name
    */
-  sortColumn: keyof DebtorInfo = 'daysOverdue';
+  sortColumn: keyof DebtorInfo = 'overdueDays';
 
   /**
    * Sort direction
@@ -78,13 +103,43 @@ export class DebtorListComponent implements OnInit {
    */
   sendingNotifications = false;
 
-  constructor(
-    private buildingService: ApartmentBuildingService,
-    private monthlyDueService: MonthlyDueService
-  ) { }
-
   ngOnInit(): void {
     this.loadBuildings();
+  }
+
+  ngOnDestroy(): void {
+    // Clean up subscriptions
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * Toggle auto-refresh functionality
+   */
+  toggleAutoRefresh(): void {
+    this.autoRefreshEnabled = !this.autoRefreshEnabled;
+    
+    if (this.autoRefreshEnabled) {
+      this.notification.info('Auto-refresh enabled (every 30 seconds)');
+      this.startAutoRefresh();
+    } else {
+      this.notification.info('Auto-refresh disabled');
+    }
+  }
+
+  /**
+   * Start auto-refresh timer
+   */
+  private startAutoRefresh(): void {
+    // Refresh every 30 seconds when auto-refresh is enabled
+    timer(30000, 30000)
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap(() => this.autoRefreshEnabled ? [true] : [])
+      )
+      .subscribe(() => {
+        this.loadDebtors(true);
+      });
   }
 
   /**
@@ -92,23 +147,21 @@ export class DebtorListComponent implements OnInit {
    */
   private loadBuildings(): void {
     this.loading = true;
-    this.errorMessage = '';
 
-    this.buildingService.getAllBuildings().subscribe({
+    this.buildingService.getBuildings().subscribe({
       next: (buildings) => {
         this.buildings = buildings;
         
         // Select first building by default
         if (buildings.length > 0) {
-          this.selectedBuildingId = buildings[0].id!;
+          this.selectedBuildingId = buildings[0].id;
           this.loadDebtors();
         } else {
           this.loading = false;
-          this.errorMessage = 'No buildings found. Please add a building first.';
         }
       },
       error: (error) => {
-        this.errorMessage = 'Failed to load buildings. Please try again.';
+        this.notification.error('Failed to load buildings. Please try again.');
         this.loading = false;
         console.error('Error loading buildings:', error);
       }
@@ -118,13 +171,14 @@ export class DebtorListComponent implements OnInit {
   /**
    * Load debtors for the selected building
    */
-  private loadDebtors(): void {
+  private loadDebtors(forceRefresh = false): void {
     if (!this.selectedBuildingId) return;
 
-    this.loading = true;
-    this.errorMessage = '';
+    if (!forceRefresh) {
+      this.loading = true;
+    }
 
-    this.monthlyDueService.getDebtorsList(this.selectedBuildingId).subscribe({
+    this.monthlyDueService.getDebtorReport(this.selectedBuildingId, forceRefresh).subscribe({
       next: (debtors) => {
         this.debtors = debtors;
         this.filteredDebtors = debtors;
@@ -133,7 +187,7 @@ export class DebtorListComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        this.errorMessage = 'Failed to load debtors. Please try again.';
+        this.notification.error('Failed to load debtors. Please try again.');
         this.loading = false;
         console.error('Error loading debtors:', error);
       }
@@ -143,10 +197,14 @@ export class DebtorListComponent implements OnInit {
   /**
    * Handle building selection change
    */
-  onBuildingChange(buildingId: number): void {
-    this.selectedBuildingId = buildingId;
-    this.selectedDebtors.clear();
-    this.loadDebtors();
+  onBuildingChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const buildingId = parseInt(target.value, 10);
+    if (!isNaN(buildingId)) {
+      this.selectedBuildingId = buildingId;
+      this.selectedDebtors.clear();
+      this.loadDebtors();
+    }
   }
 
   /**
@@ -231,6 +289,14 @@ export class DebtorListComponent implements OnInit {
   }
 
   /**
+   * Handle search term change
+   */
+  onSearchChange(searchTerm: string): void {
+    this.searchTerm = searchTerm;
+    this.filterDebtors();
+  }
+
+  /**
    * Check if a debtor is selected
    */
   isSelected(flatId: number): boolean {
@@ -257,18 +323,28 @@ export class DebtorListComponent implements OnInit {
    * Send notifications to selected debtors
    */
   sendNotifications(): void {
-    if (!this.selectedBuildingId) return;
+    if (!this.selectedBuildingId || this.selectedDebtors.size === 0) {
+      this.notification.warning('Please select at least one debtor to send notifications');
+      return;
+    }
 
     this.sendingNotifications = true;
     
-    this.monthlyDueService.sendOverdueNotifications(this.selectedBuildingId).subscribe({
+    // For now, we'll use the sendReminders method which sends to all debtors
+    // In a future enhancement, we could add support for sending to selected debtors only
+    this.monthlyDueService.sendReminders(this.selectedBuildingId).subscribe({
       next: (result) => {
-        alert(`Notifications sent! Success: ${result.sentCount}, Failed: ${result.failedCount}`);
+        this.notification.success(`Sent ${result.sent} reminder emails successfully`);
+        if (result.failed > 0) {
+          this.notification.warning(`Failed to send ${result.failed} emails`);
+        }
         this.sendingNotifications = false;
         this.selectedDebtors.clear();
+        // Refresh the debtor list
+        this.loadDebtors(true);
       },
       error: (error) => {
-        alert('Failed to send notifications. Please try again.');
+        this.notification.error('Failed to send notifications. Please try again.');
         this.sendingNotifications = false;
         console.error('Error sending notifications:', error);
       }
@@ -312,5 +388,20 @@ export class DebtorListComponent implements OnInit {
     if (overdueCount >= 3) return 'bg-danger';
     if (overdueCount >= 2) return 'bg-warning';
     return 'bg-secondary';
+  }
+
+  /**
+   * Manual refresh data
+   */
+  refreshData(): void {
+    this.loadDebtors(true);
+    this.notification.info('Debtor list refreshed');
+  }
+
+  /**
+   * Navigate to add building page
+   */
+  navigateToAddBuilding = (): void => {
+    this.router.navigate(['/buildings', 'new']);
   }
 }

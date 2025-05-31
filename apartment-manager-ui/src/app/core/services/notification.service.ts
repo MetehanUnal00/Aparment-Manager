@@ -129,7 +129,7 @@ export class NotificationService {
     this.notificationSubject.next(notification);
 
     // Auto-dismiss if duration is set
-    if (notification.duration > 0) {
+    if (notification.duration && notification.duration > 0) {
       setTimeout(() => {
         this.dismiss(notification.id);
       }, notification.duration);

@@ -1,12 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
-import { ApartmentBuildingService, BuildingStatistics } from '../../../shared/services/apartment-building.service';
-import { MonthlyDueService, CollectionRate } from '../../../shared/services/monthly-due.service';
-import { PaymentService, PaymentStatistics } from '../../../shared/services/payment.service';
-import { ExpenseService, CategorySummary } from '../../../shared/services/expense.service';
+import { RouterLink, Router } from '@angular/router';
+import { forkJoin, Subject, timer, switchMap, takeUntil } from 'rxjs';
+import { ApartmentBuildingService } from '../../../shared/services/apartment-building.service';
+import { MonthlyDueService } from '../../../shared/services/monthly-due.service';
+import { PaymentService } from '../../../shared/services/payment.service';
+import { ExpenseService } from '../../../shared/services/expense.service';
+import { FlatService } from '../../../shared/services/flat.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { ApartmentBuildingResponse } from '../../../shared/models/apartment-building.model';
+import { DebtorInfo } from '../../../shared/models/monthly-due.model';
+import { ExpenseCategorySummary } from '../../../shared/models/expense.model';
+import { FlatResponse } from '../../../shared/models/flat.model';
+import { PaymentSummary } from '../../../shared/models/payment.model';
 
 /**
  * Interface for dashboard summary data
@@ -32,20 +41,40 @@ interface DashboardSummary {
 @Component({
   selector: 'app-dashboard-overview',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    RouterLink, 
+    LoadingSpinnerComponent,
+    EmptyStateComponent
+  ],
   templateUrl: './dashboard-overview.component.html',
   styleUrls: ['./dashboard-overview.component.scss']
 })
-export class DashboardOverviewComponent implements OnInit {
+export class DashboardOverviewComponent implements OnInit, OnDestroy {
+  // Inject services using the new inject() function
+  private readonly buildingService = inject(ApartmentBuildingService);
+  private readonly monthlyDueService = inject(MonthlyDueService);
+  private readonly paymentService = inject(PaymentService);
+  private readonly expenseService = inject(ExpenseService);
+  private readonly flatService = inject(FlatService);
+  private readonly notification = inject(NotificationService);
+  private readonly router = inject(Router);
+
+  /**
+   * Subject for component destruction
+   */
+  private readonly destroy$ = new Subject<void>();
+
   /**
    * Loading state indicator
    */
   loading = true;
 
   /**
-   * Error message if data loading fails
+   * Auto-refresh enabled state
    */
-  errorMessage = '';
+  autoRefreshEnabled = false;
 
   /**
    * Dashboard summary data
@@ -66,7 +95,7 @@ export class DashboardOverviewComponent implements OnInit {
   /**
    * List of buildings for selection
    */
-  buildings: any[] = [];
+  buildings: ApartmentBuildingResponse[] = [];
 
   /**
    * Currently selected building ID
@@ -74,34 +103,62 @@ export class DashboardOverviewComponent implements OnInit {
   selectedBuildingId: number | null = null;
 
   /**
-   * Building-specific statistics
+   * Flats in the selected building
    */
-  buildingStats: BuildingStatistics | null = null;
+  flats: FlatResponse[] = [];
 
   /**
-   * Collection rate data for the selected building
+   * Debtor list for the selected building
    */
-  collectionRate: CollectionRate | null = null;
+  debtors: DebtorInfo[] = [];
 
   /**
-   * Payment statistics for the selected building
+   * Payment summary for the selected building
    */
-  paymentStats: PaymentStatistics | null = null;
+  paymentSummary: PaymentSummary | null = null;
 
   /**
    * Expense categories summary
    */
-  expenseCategories: CategorySummary[] = [];
-
-  constructor(
-    private buildingService: ApartmentBuildingService,
-    private monthlyDueService: MonthlyDueService,
-    private paymentService: PaymentService,
-    private expenseService: ExpenseService
-  ) { }
+  expenseCategories: ExpenseCategorySummary[] = [];
 
   ngOnInit(): void {
     this.loadDashboardData();
+  }
+
+  ngOnDestroy(): void {
+    // Clean up subscriptions
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * Toggle auto-refresh functionality
+   */
+  toggleAutoRefresh(): void {
+    this.autoRefreshEnabled = !this.autoRefreshEnabled;
+    
+    if (this.autoRefreshEnabled) {
+      this.notification.info('Auto-refresh enabled (every 30 seconds)');
+      this.startAutoRefresh();
+    } else {
+      this.notification.info('Auto-refresh disabled');
+    }
+  }
+
+  /**
+   * Start auto-refresh timer
+   */
+  private startAutoRefresh(): void {
+    // Refresh every 30 seconds when auto-refresh is enabled
+    timer(30000, 30000)
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap(() => this.autoRefreshEnabled ? [true] : [])
+      )
+      .subscribe(() => {
+        this.loadBuildingSpecificData();
+      });
   }
 
   /**
@@ -109,24 +166,23 @@ export class DashboardOverviewComponent implements OnInit {
    */
   loadDashboardData(): void {
     this.loading = true;
-    this.errorMessage = '';
 
     // Load buildings first
-    this.buildingService.getAllBuildings().subscribe({
+    this.buildingService.getBuildings().subscribe({
       next: (buildings) => {
         this.buildings = buildings;
         this.summary.totalBuildings = buildings.length;
 
         // If we have buildings, select the first one by default
         if (buildings.length > 0) {
-          this.selectedBuildingId = buildings[0].id!;
+          this.selectedBuildingId = buildings[0].id;
           this.loadBuildingSpecificData();
         } else {
           this.loading = false;
         }
       },
       error: (error) => {
-        this.errorMessage = 'Failed to load buildings. Please try again.';
+        this.notification.error('Failed to load buildings. Please try again.');
         this.loading = false;
         console.error('Error loading buildings:', error);
       }
@@ -140,63 +196,64 @@ export class DashboardOverviewComponent implements OnInit {
     if (!this.selectedBuildingId) return;
 
     const currentDate = new Date();
-    const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-based
 
     // Create observables for all data we need
     const requests = {
-      buildingStats: this.buildingService.getBuildingStatistics(this.selectedBuildingId),
-      collectionRate: this.monthlyDueService.getCollectionRate(
-        this.selectedBuildingId,
-        currentDate.getMonth() + 1,
-        currentDate.getFullYear()
-      ),
-      paymentStats: this.paymentService.getPaymentStatistics(
-        this.selectedBuildingId,
-        startOfMonth.toISOString().split('T')[0],
-        endOfMonth.toISOString().split('T')[0]
-      ),
-      unpaidDuesCount: this.monthlyDueService.getUnpaidDuesCount(this.selectedBuildingId),
-      expenseCategories: this.expenseService.getCategorySummary(
-        this.selectedBuildingId,
-        startOfMonth.toISOString().split('T')[0],
-        endOfMonth.toISOString().split('T')[0]
-      )
+      // Get flats for the building (this will give us occupancy info)
+      flats: this.flatService.getFlatsByBuilding(this.selectedBuildingId),
+      
+      // Get debtor report (includes total debt)
+      debtors: this.monthlyDueService.getDebtorReport(this.selectedBuildingId),
+      
+      // Get payment summary
+      paymentSummary: this.paymentService.getPaymentSummary(this.selectedBuildingId),
+      
+      // Get expense category summary
+      expenseCategories: this.expenseService.getCategorySummary(this.selectedBuildingId),
+      
+      // Get monthly expense total
+      monthlyExpenseTotal: this.expenseService.getMonthlyTotal(this.selectedBuildingId, currentYear, currentMonth)
     };
 
     // Execute all requests in parallel
     forkJoin(requests).subscribe({
       next: (results) => {
-        // Update building statistics
-        this.buildingStats = results.buildingStats;
-        this.summary.totalFlats = results.buildingStats.totalFlats;
-        this.summary.occupiedFlats = results.buildingStats.occupiedFlats;
-        this.summary.monthlyIncomeTarget = results.buildingStats.monthlyIncomeTarget;
-        this.summary.totalDebt = results.buildingStats.totalDebt;
+        // Update flats data
+        this.flats = results.flats;
+        this.summary.totalFlats = results.flats.length;
+        this.summary.occupiedFlats = results.flats.filter(f => f.tenantName).length;
+        
+        // Calculate monthly income target (sum of all flat monthly rents)
+        this.summary.monthlyIncomeTarget = results.flats.reduce((sum, flat) => sum + (flat.monthlyRent || 0), 0);
 
-        // Update collection rate
-        this.collectionRate = results.collectionRate;
-        this.summary.collectionRate = results.collectionRate.collectionRate;
-        this.summary.currentMonthCollection = results.collectionRate.totalPaidAmount;
+        // Update debtor data
+        this.debtors = results.debtors;
+        this.summary.totalDebt = results.debtors.reduce((sum, debtor) => sum + debtor.totalDebt, 0);
+        this.summary.unpaidDuesCount = results.debtors.reduce((count, debtor) => count + debtor.unpaidDuesCount, 0);
 
-        // Update payment statistics
-        this.paymentStats = results.paymentStats;
-        this.summary.recentPaymentsCount = results.paymentStats.totalCount;
-
-        // Update unpaid dues count
-        this.summary.unpaidDuesCount = results.unpaidDuesCount;
+        // Update payment summary
+        this.paymentSummary = results.paymentSummary;
+        this.summary.recentPaymentsCount = results.paymentSummary.paymentCount;
+        
+        // Calculate collection rate (current month)
+        const currentMonthPayments = results.paymentSummary.totalAmount; // This is for the building
+        this.summary.currentMonthCollection = currentMonthPayments;
+        this.summary.collectionRate = this.summary.monthlyIncomeTarget > 0 
+          ? (currentMonthPayments / this.summary.monthlyIncomeTarget) * 100 
+          : 0;
 
         // Update expense categories
         this.expenseCategories = results.expenseCategories;
-        this.summary.currentMonthExpenses = results.expenseCategories.reduce(
-          (total, cat) => total + cat.totalAmount, 
-          0
-        );
+        
+        // Update monthly expense total
+        this.summary.currentMonthExpenses = results.monthlyExpenseTotal.totalAmount;
 
         this.loading = false;
       },
       error: (error) => {
-        this.errorMessage = 'Failed to load dashboard data. Please try again.';
+        this.notification.error('Failed to load dashboard data. Please try again.');
         this.loading = false;
         console.error('Error loading dashboard data:', error);
       }
@@ -206,9 +263,13 @@ export class DashboardOverviewComponent implements OnInit {
   /**
    * Handle building selection change
    */
-  onBuildingChange(buildingId: number): void {
-    this.selectedBuildingId = buildingId;
-    this.loadBuildingSpecificData();
+  onBuildingChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const buildingId = parseInt(target.value, 10);
+    if (!isNaN(buildingId)) {
+      this.selectedBuildingId = buildingId;
+      this.loadBuildingSpecificData();
+    }
   }
 
   /**
@@ -245,5 +306,52 @@ export class DashboardOverviewComponent implements OnInit {
       style: 'currency',
       currency: 'USD'
     }).format(value);
+  }
+
+  /**
+   * Get expense category percentage for display
+   */
+  getExpenseCategoryPercentage(category: ExpenseCategorySummary): number {
+    const total = this.expenseCategories.reduce((sum, cat) => sum + cat.totalAmount, 0);
+    return total > 0 ? (category.totalAmount / total) * 100 : 0;
+  }
+
+  /**
+   * Manual refresh data
+   */
+  refreshData(): void {
+    this.loadBuildingSpecificData();
+    this.notification.info('Dashboard data refreshed');
+  }
+
+  /**
+   * Navigate to add building page
+   */
+  navigateToAddBuilding = (): void => {
+    this.router.navigate(['/buildings', 'new']);
+  }
+
+  /**
+   * Get display name for expense category
+   */
+  getCategoryDisplayName(category: string): string {
+    const categoryMap: { [key: string]: string } = {
+      'MAINTENANCE': 'Maintenance',
+      'UTILITIES': 'Utilities',
+      'CLEANING': 'Cleaning',
+      'SECURITY': 'Security',
+      'INSURANCE': 'Insurance',
+      'TAXES': 'Taxes',
+      'MANAGEMENT': 'Management',
+      'REPAIRS': 'Repairs',
+      'LANDSCAPING': 'Landscaping',
+      'ELEVATOR': 'Elevator',
+      'SUPPLIES': 'Supplies',
+      'LEGAL': 'Legal',
+      'ACCOUNTING': 'Accounting',
+      'MARKETING': 'Marketing',
+      'OTHER': 'Other'
+    };
+    return categoryMap[category] || category;
   }
 }

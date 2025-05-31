@@ -34,7 +34,7 @@ public class FlatController {
 
     @Operation(
         summary = "Create a new flat",
-        description = "Creates a new flat in the specified apartment building. Requires MANAGER role."
+        description = "Creates a new flat in the specified apartment building. Requires MANAGER or ADMIN role."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -59,11 +59,11 @@ public class FlatController {
         ),
         @ApiResponse(
             responseCode = "403",
-            description = "Forbidden - User does not have MANAGER role"
+            description = "Forbidden - User does not have MANAGER or ADMIN role"
         )
     })
     @PostMapping
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<?> createFlat(
             @Parameter(description = "ID of the apartment building", required = true)
             @PathVariable Long buildingId,
@@ -85,7 +85,7 @@ public class FlatController {
 
     @Operation(
         summary = "Get all flats in a building",
-        description = "Retrieves all flats in the specified apartment building. Requires MANAGER or TENANT role."
+        description = "Retrieves all flats in the specified apartment building. Requires MANAGER, ADMIN, or TENANT role."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -114,7 +114,7 @@ public class FlatController {
         )
     })
     @GetMapping
-    @PreAuthorize("hasRole('MANAGER') or hasRole('TENANT')") // Tenants might view flats in their building
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN') or hasRole('TENANT')") // Tenants might view flats in their building
     public ResponseEntity<?> getAllFlatsByBuilding(
             @Parameter(description = "ID of the apartment building", required = true)
             @PathVariable Long buildingId) {
@@ -128,7 +128,7 @@ public class FlatController {
 
     @Operation(
         summary = "Get flat by ID",
-        description = "Retrieves a specific flat by its ID. Requires MANAGER or TENANT role."
+        description = "Retrieves a specific flat by its ID. Requires MANAGER, ADMIN, or TENANT role."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -157,7 +157,7 @@ public class FlatController {
         )
     })
     @GetMapping("/{flatId}")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('TENANT')") // Tenant might view their specific flat
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN') or hasRole('TENANT')") // Tenant might view their specific flat
     public ResponseEntity<?> getFlatById(
             @Parameter(description = "ID of the apartment building", required = true)
             @PathVariable Long buildingId,
@@ -173,7 +173,7 @@ public class FlatController {
 
     @Operation(
         summary = "Update flat",
-        description = "Updates an existing flat's information. Requires MANAGER role."
+        description = "Updates an existing flat's information. Requires MANAGER or ADMIN role."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -198,11 +198,11 @@ public class FlatController {
         ),
         @ApiResponse(
             responseCode = "403",
-            description = "Forbidden - User does not have MANAGER role"
+            description = "Forbidden - User does not have MANAGER or ADMIN role"
         )
     })
     @PutMapping("/{flatId}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<?> updateFlat(
             @Parameter(description = "ID of the apartment building", required = true)
             @PathVariable Long buildingId,
@@ -227,7 +227,7 @@ public class FlatController {
 
     @Operation(
         summary = "Delete flat",
-        description = "Deletes a flat from the building. Requires MANAGER role. Note: Consider using deactivate instead for audit trail."
+        description = "Deletes a flat from the building. Requires MANAGER or ADMIN role. Note: Consider using deactivate instead for audit trail."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -252,11 +252,11 @@ public class FlatController {
         ),
         @ApiResponse(
             responseCode = "403",
-            description = "Forbidden - User does not have MANAGER role"
+            description = "Forbidden - User does not have MANAGER or ADMIN role"
         )
     })
     @DeleteMapping("/{flatId}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<?> deleteFlat(
             @Parameter(description = "ID of the apartment building", required = true)
             @PathVariable Long buildingId,
@@ -360,7 +360,7 @@ public class FlatController {
     
     @Operation(
         summary = "Update tenant information",
-        description = "Updates only the tenant-related information for a flat. Requires MANAGER role."
+        description = "Updates only the tenant-related information for a flat. Requires MANAGER or ADMIN role."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -385,11 +385,11 @@ public class FlatController {
         ),
         @ApiResponse(
             responseCode = "403",
-            description = "Forbidden - User does not have MANAGER role"
+            description = "Forbidden - User does not have MANAGER or ADMIN role"
         )
     })
     @PutMapping("/{flatId}/tenant")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<?> updateTenantInfo(
             @Parameter(description = "ID of the apartment building", required = true)
             @PathVariable Long buildingId,

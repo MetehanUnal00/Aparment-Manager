@@ -5,31 +5,34 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading" class="text-center py-5">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-    <p class="mt-2">Loading debtor information...</p>
-  </div>
+  <app-loading-spinner 
+    *ngIf="loading" 
+    [text]="'Loading debtor information...'"
+    [size]="'large'">
+  </app-loading-spinner>
 
-  <!-- Error State -->
-  <div *ngIf="!loading && errorMessage" class="alert alert-danger" role="alert">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    {{ errorMessage }}
-  </div>
+  <!-- Empty State for No Buildings -->
+  <app-empty-state
+    *ngIf="!loading && buildings.length === 0"
+    [title]="'No Buildings Found'"
+    [message]="'Start by adding your first apartment building.'"
+    [actionLabel]="'Add Building'"
+    [actionHandler]="navigateToAddBuilding"
+    [icon]="'building'">
+  </app-empty-state>
 
   <!-- Debtor List Content -->
-  <div *ngIf="!loading && !errorMessage">
+  <div *ngIf="!loading && buildings.length > 0">
     <!-- Controls Row -->
     <div class="row mb-4">
       <!-- Building Selector -->
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label for="buildingSelect" class="form-label">Select Building:</label>
         <select 
           id="buildingSelect" 
           class="form-select"
           [(ngModel)]="selectedBuildingId"
-          (change)="onBuildingChange($any($event.target).value)"
+          (change)="onBuildingChange($event)"
         >
           <option *ngFor="let building of buildings" [value]="building.id">
             {{ building.name }}
@@ -38,28 +41,55 @@
       </div>
 
       <!-- Search Box -->
-      <div class="col-md-4">
-        <label for="searchInput" class="form-label">Search:</label>
-        <input 
-          type="text" 
-          id="searchInput"
-          class="form-control" 
-          placeholder="Search by flat number or tenant name"
-          [(ngModel)]="searchTerm"
-          (input)="filterDebtors()"
-        >
+      <div class="col-md-5">
+        <label class="form-label">Search:</label>
+        <app-search-box
+          [placeholder]="'Search by flat number or tenant name'"
+          [value]="searchTerm"
+          (search)="onSearchChange($event)"
+          [showClear]="true">
+        </app-search-box>
       </div>
 
-      <!-- Summary Info -->
-      <div class="col-md-4">
-        <div class="summary-box">
-          <div class="d-flex justify-content-between">
-            <span>Total Debtors:</span>
-            <strong>{{ filteredDebtors.length }}</strong>
-          </div>
-          <div class="d-flex justify-content-between">
-            <span>Total Debt:</span>
-            <strong class="text-danger">{{ formatCurrency(totalDebt) }}</strong>
+      <!-- Auto-refresh Toggle -->
+      <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+          <button 
+            type="button" 
+            class="btn btn-outline-primary btn-sm"
+            [class.active]="autoRefreshEnabled"
+            (click)="toggleAutoRefresh()">
+            <i class="bi" [class.bi-pause-circle]="autoRefreshEnabled" [class.bi-play-circle]="!autoRefreshEnabled"></i>
+            {{ autoRefreshEnabled ? 'Pause' : 'Auto-refresh' }}
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-outline-secondary btn-sm"
+            (click)="refreshData()">
+            <i class="bi bi-arrow-clockwise"></i>
+            Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Row -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="summary-box p-3 bg-body-tertiary rounded">
+          <div class="d-flex justify-content-around">
+            <div class="text-center">
+              <span class="text-muted">Total Debtors</span>
+              <h4 class="mb-0">{{ filteredDebtors.length }}</h4>
+            </div>
+            <div class="text-center">
+              <span class="text-muted">Total Debt</span>
+              <h4 class="mb-0 text-danger">{{ formatCurrency(totalDebt) }}</h4>
+            </div>
+            <div class="text-center" *ngIf="selectedDebtors.size > 0">
+              <span class="text-muted">Selected</span>
+              <h4 class="mb-0 text-primary">{{ selectedDebtors.size }}</h4>
+            </div>
           </div>
         </div>
       </div>
@@ -82,11 +112,12 @@
     </div>
 
     <!-- Empty State -->
-    <div *ngIf="debtors.length === 0" class="text-center py-5">
-      <i class="bi bi-check-circle fs-1 text-success"></i>
-      <h4 class="mt-3">No Debtors Found</h4>
-      <p class="text-muted">All tenants are up to date with their payments!</p>
-    </div>
+    <app-empty-state
+      *ngIf="debtors.length === 0"
+      [title]="'No Debtors Found'"
+      [message]="'All tenants are up to date with their payments!'"
+      [icon]="'check-circle'">
+    </app-empty-state>
 
     <!-- Debtor Table -->
     <div *ngIf="debtors.length > 0" class="table-responsive">
@@ -114,15 +145,15 @@
               Total Debt 
               <i class="bi bi-chevron-expand"></i>
             </th>
-            <th scope="col" class="sortable" (click)="sort('overdueCount')">
-              Overdue Count 
+            <th scope="col" class="sortable" (click)="sort('unpaidDuesCount')">
+              Unpaid Dues 
               <i class="bi bi-chevron-expand"></i>
             </th>
-            <th scope="col" class="sortable" (click)="sort('oldestDueDate')">
+            <th scope="col" class="sortable" (click)="sort('oldestUnpaidDueDate')">
               Oldest Due 
               <i class="bi bi-chevron-expand"></i>
             </th>
-            <th scope="col" class="sortable" (click)="sort('daysOverdue')">
+            <th scope="col" class="sortable" (click)="sort('overdueDays')">
               Days Overdue 
               <i class="bi bi-chevron-expand"></i>
             </th>
@@ -150,13 +181,13 @@
               {{ formatCurrency(debtor.totalDebt) }}
             </td>
             <td>
-              <span class="badge" [ngClass]="getBadgeClass(debtor.overdueCount)">
-                {{ debtor.overdueCount }}
+              <span class="badge" [ngClass]="getBadgeClass(debtor.unpaidDuesCount)">
+                {{ debtor.unpaidDuesCount }}
               </span>
             </td>
-            <td>{{ formatDate(debtor.oldestDueDate) }}</td>
-            <td [ngClass]="getOverdueClass(debtor.daysOverdue)">
-              {{ debtor.daysOverdue }} days
+            <td>{{ formatDate(debtor.oldestUnpaidDueDate) }}</td>
+            <td [ngClass]="getOverdueClass(debtor.overdueDays)">
+              {{ debtor.overdueDays }} days
             </td>
             <td>
               <div class="btn-group btn-group-sm" role="group">

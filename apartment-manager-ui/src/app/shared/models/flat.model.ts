@@ -81,3 +81,15 @@ export interface FlatOccupancyHistory {
   totalPaid: number;
   totalOwed: number;
 }
+
+/**
+ * Flat balance information
+ */
+export interface FlatBalance {
+  flatId: number;
+  currentBalance: number;
+  totalDues: number;
+  totalPayments: number;
+  lastPaymentDate?: string;
+  lastPaymentAmount?: number;
+}

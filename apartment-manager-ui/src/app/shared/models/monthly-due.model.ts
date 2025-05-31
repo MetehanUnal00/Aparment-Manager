@@ -122,3 +122,17 @@ export interface MonthlyDueFilters {
   overdueOnly?: boolean;
 }
 
+/**
+ * Overdue summary for dashboard
+ */
+export interface OverdueSummary {
+  dueId: number;
+  flatId: number;
+  flatNumber: string;
+  tenantName?: string;
+  dueAmount: number;
+  dueDate: string;
+  daysOverdue: number;
+  description?: string;
+}
+

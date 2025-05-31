@@ -121,7 +121,7 @@ export class FlatService {
   getFlatBalance(flatId: number): Observable<FlatBalance> {
     return this.api.get<FlatBalance>(`${this.baseUrl}/${flatId}/balance`).pipe(
       // Note: Backend might already cache this with @Cacheable
-      tap(balance => console.log(`Flat ${flatId} balance:`, balance.balance))
+      tap(balance => console.log(`Flat ${flatId} balance:`, balance.currentBalance))
     );
   }
 

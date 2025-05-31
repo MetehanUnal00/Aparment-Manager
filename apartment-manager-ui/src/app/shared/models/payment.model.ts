@@ -105,3 +105,19 @@ export interface PaymentSearchFilters {
   maxAmount?: number;
 }
 
+/**
+ * Payment analytics
+ */
+export interface PaymentAnalytics {
+  totalPayments: number;
+  totalAmount: number;
+  averagePayment: number;
+  paymentsByMonth: MonthlyPaymentTrend[];
+  paymentsByMethod: PaymentMethodBreakdown[];
+  topPayingFlats: {
+    flatId: number;
+    flatNumber: string;
+    totalPaid: number;
+  }[];
+}
+
