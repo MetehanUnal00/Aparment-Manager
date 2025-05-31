@@ -14,7 +14,8 @@ public class FlatRequest {
     private Integer numberOfRooms;
 
     @Positive
-    private Double areaSqMeters;
+    @DecimalMin(value = "0.0", inclusive = false)
+    private BigDecimal areaSqMeters;
 
     @NotNull
     private Long apartmentBuildingId; // To link to an existing ApartmentBuilding
@@ -57,11 +58,11 @@ public class FlatRequest {
         this.numberOfRooms = numberOfRooms;
     }
 
-    public Double getAreaSqMeters() {
+    public BigDecimal getAreaSqMeters() {
         return areaSqMeters;
     }
 
-    public void setAreaSqMeters(Double areaSqMeters) {
+    public void setAreaSqMeters(BigDecimal areaSqMeters) {
         this.areaSqMeters = areaSqMeters;
     }
 

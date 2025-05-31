@@ -35,7 +35,8 @@ public class Flat {
 
     private Integer numberOfRooms;
 
-    private Double areaSqMeters; // Area in square meters
+    @Column(name = "area_sq_meters", precision = 10, scale = 2)
+    private BigDecimal areaSqMeters; // Area in square meters
     
     /**
      * Tenant information - MVP approach using simple fields
@@ -135,7 +136,7 @@ public class Flat {
     public Flat() {
     }
 
-    public Flat(String flatNumber, Integer numberOfRooms, Double areaSqMeters, ApartmentBuilding apartmentBuilding) {
+    public Flat(String flatNumber, Integer numberOfRooms, BigDecimal areaSqMeters, ApartmentBuilding apartmentBuilding) {
         this.flatNumber = flatNumber;
         this.numberOfRooms = numberOfRooms;
         this.areaSqMeters = areaSqMeters;
@@ -167,11 +168,11 @@ public class Flat {
         this.numberOfRooms = numberOfRooms;
     }
 
-    public Double getAreaSqMeters() {
+    public BigDecimal getAreaSqMeters() {
         return areaSqMeters;
     }
 
-    public void setAreaSqMeters(Double areaSqMeters) {
+    public void setAreaSqMeters(BigDecimal areaSqMeters) {
         this.areaSqMeters = areaSqMeters;
     }
 

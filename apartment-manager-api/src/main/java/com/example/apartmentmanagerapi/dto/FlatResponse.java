@@ -7,7 +7,7 @@ public class FlatResponse {
     private Long id;
     private String flatNumber;
     private Integer numberOfRooms;
-    private Double areaSqMeters;
+    private BigDecimal areaSqMeters;
     private Long apartmentBuildingId;
     private String apartmentBuildingName; // For convenience
     private LocalDateTime createdAt;
@@ -24,7 +24,7 @@ public class FlatResponse {
     private BigDecimal currentBalance;
 
     // Constructor
-    public FlatResponse(Long id, String flatNumber, Integer numberOfRooms, Double areaSqMeters,
+    public FlatResponse(Long id, String flatNumber, Integer numberOfRooms, BigDecimal areaSqMeters,
                         Long apartmentBuildingId, String apartmentBuildingName,
                         LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
@@ -62,11 +62,11 @@ public class FlatResponse {
         this.numberOfRooms = numberOfRooms;
     }
 
-    public Double getAreaSqMeters() {
+    public BigDecimal getAreaSqMeters() {
         return areaSqMeters;
     }
 
-    public void setAreaSqMeters(Double areaSqMeters) {
+    public void setAreaSqMeters(BigDecimal areaSqMeters) {
         this.areaSqMeters = areaSqMeters;
     }
 
