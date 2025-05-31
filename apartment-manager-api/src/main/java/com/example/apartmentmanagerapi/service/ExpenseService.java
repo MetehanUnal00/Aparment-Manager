@@ -10,6 +10,9 @@ import com.example.apartmentmanagerapi.repository.ExpenseRepository;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +51,11 @@ public class ExpenseService implements IExpenseService {
      * @param distributeToFlats Whether to distribute expense among flats
      * @return Created expense
      */
+    @Caching(evict = {
+        @CacheEvict(value = "monthlyExpenseTotals", key = "#expense.building.id"),
+        @CacheEvict(value = "expenseCategoryBreakdown", key = "#expense.building.id"),
+        @CacheEvict(value = "buildingFinancials", key = "#expense.building.id")
+    })
     public Expense createExpense(Expense expense, boolean distributeToFlats) {
         log.info("Creating expense for building ID: {} with amount: {} in category: {}", 
                 expense.getBuilding().getId(), expense.getAmount(), expense.getCategory());
@@ -171,6 +179,7 @@ public class ExpenseService implements IExpenseService {
      * @return Map of category to total amount
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "expenseCategoryBreakdown", key = "#buildingId + '-' + #startDate + '-' + #endDate")
     public Map<Expense.ExpenseCategory, BigDecimal> getExpenseBreakdownByCategory(
             Long buildingId, LocalDate startDate, LocalDate endDate) {
         log.debug("Calculating expense breakdown for building ID: {} between {} and {}", 
@@ -198,6 +207,7 @@ public class ExpenseService implements IExpenseService {
      * @return Map of YearMonth to total expenses
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "monthlyExpenseTotals", key = "#buildingId + '-' + #startMonth + '-' + #endMonth")
     public Map<YearMonth, BigDecimal> getMonthlyExpenseTotals(
             Long buildingId, YearMonth startMonth, YearMonth endMonth) {
         log.debug("Calculating monthly expense totals for building ID: {} from {} to {}", 
@@ -239,6 +249,11 @@ public class ExpenseService implements IExpenseService {
      * @param expense Expense with updates
      * @return Updated expense
      */
+    @Caching(evict = {
+        @CacheEvict(value = "monthlyExpenseTotals", allEntries = true),
+        @CacheEvict(value = "expenseCategoryBreakdown", allEntries = true),
+        @CacheEvict(value = "buildingFinancials", allEntries = true)
+    })
     public Expense updateExpense(Expense expense) {
         log.info("Updating expense ID: {}", expense.getId());
         
@@ -273,6 +288,11 @@ public class ExpenseService implements IExpenseService {
      * 
      * @param expenseId ID of the expense to delete
      */
+    @Caching(evict = {
+        @CacheEvict(value = "monthlyExpenseTotals", allEntries = true),
+        @CacheEvict(value = "expenseCategoryBreakdown", allEntries = true),
+        @CacheEvict(value = "buildingFinancials", allEntries = true)
+    })
     public void deleteExpense(Long expenseId) {
         log.info("Deleting expense ID: {}", expenseId);
         
@@ -296,6 +316,7 @@ public class ExpenseService implements IExpenseService {
      * @return Average monthly expense amount
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "buildingFinancials", key = "'avg-expense-' + #buildingId + '-' + #months")
     public BigDecimal calculateAverageMonthlyExpenses(Long buildingId, int months) {
         log.debug("Calculating average monthly expenses for building ID: {} over {} months", 
                 buildingId, months);
@@ -321,6 +342,7 @@ public class ExpenseService implements IExpenseService {
      * @return Map with trend information (current, previous, change percentage)
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "buildingFinancials", key = "'expense-trends-' + #buildingId + '-' + #periodDays")
     public Map<String, Object> analyzeExpenseTrends(Long buildingId, int periodDays) {
         log.debug("Analyzing expense trends for building ID: {} with period of {} days", 
                 buildingId, periodDays);

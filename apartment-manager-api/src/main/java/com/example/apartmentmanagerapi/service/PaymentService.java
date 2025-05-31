@@ -9,6 +9,9 @@ import com.example.apartmentmanagerapi.repository.PaymentRepository;
 import com.example.apartmentmanagerapi.repository.MonthlyDueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +45,11 @@ public class PaymentService implements IPaymentService {
      * @throws IllegalArgumentException if flat doesn't exist
      * @throws IllegalStateException if payment amount exceeds outstanding balance
      */
+    @Caching(evict = {
+        @CacheEvict(value = "paymentSummary", key = "#payment.flat.apartmentBuilding.id"),
+        @CacheEvict(value = "flatBalance", key = "'debt-' + #payment.flat.id"),
+        @CacheEvict(value = "debtorList", key = "#payment.flat.apartmentBuilding.id")
+    })
     public Payment createPayment(Payment payment) {
         log.info("Creating payment for flat ID: {} with amount: {}", 
                 payment.getFlat().getId(), payment.getAmount());
@@ -175,6 +183,7 @@ public class PaymentService implements IPaymentService {
      * @return Total payment amount
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "paymentSummary", key = "#buildingId + '-' + #startDate + '-' + #endDate")
     public BigDecimal getTotalPaymentsByBuildingAndDateRange(
             Long buildingId, LocalDate startDate, LocalDate endDate) {
         log.debug("Calculating total payments for building ID: {} between {} and {}", 
@@ -192,6 +201,7 @@ public class PaymentService implements IPaymentService {
      * @return Outstanding balance amount
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "flatBalance", key = "'outstanding-' + #flatId")
     public BigDecimal calculateOutstandingBalance(Long flatId) {
         log.debug("Calculating outstanding balance for flat ID: {}", flatId);
         
@@ -213,6 +223,7 @@ public class PaymentService implements IPaymentService {
      * @return Updated payment entity
      * @throws org.springframework.orm.ObjectOptimisticLockingFailureException if concurrent update detected
      */
+    @CacheEvict(value = {"paymentSummary", "flatBalance", "debtorList"}, allEntries = true)
     public Payment updatePayment(Payment payment) {
         log.info("Updating payment ID: {}", payment.getId());
         
@@ -240,6 +251,7 @@ public class PaymentService implements IPaymentService {
      * 
      * @param paymentId ID of the payment to delete
      */
+    @CacheEvict(value = {"paymentSummary", "flatBalance", "debtorList"}, allEntries = true)
     public void deletePayment(Long paymentId) {
         log.warn("Deleting payment ID: {} - Consider implementing soft delete", paymentId);
         

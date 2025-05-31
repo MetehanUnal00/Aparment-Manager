@@ -9,6 +9,9 @@ import com.example.apartmentmanagerapi.repository.FlatRepository;
 import com.example.apartmentmanagerapi.repository.MonthlyDueRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -189,6 +192,7 @@ public class MonthlyDueService implements IMonthlyDueService {
      * @return Map of flat to total debt amount
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "debtorList", key = "#buildingId")
     public Map<Flat, BigDecimal> getDebtorDetailsForBuilding(Long buildingId) {
         log.debug("Retrieving detailed debtor information for building ID: {}", buildingId);
         
@@ -208,6 +212,7 @@ public class MonthlyDueService implements IMonthlyDueService {
      * @return Total debt amount
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "flatBalance", key = "'debt-' + #flatId")
     public BigDecimal calculateTotalDebt(Long flatId) {
         BigDecimal totalUnpaid = monthlyDueRepository.getTotalUnpaidDuesByFlat(flatId);
         return totalUnpaid != null ? totalUnpaid : BigDecimal.ZERO;
@@ -245,6 +250,10 @@ public class MonthlyDueService implements IMonthlyDueService {
      * @param monthlyDue Monthly due entity to create
      * @return Created monthly due
      */
+    @Caching(evict = {
+        @CacheEvict(value = "debtorList", allEntries = true),
+        @CacheEvict(value = "flatBalance", key = "'debt-' + #monthlyDue.flat.id")
+    })
     public MonthlyDue createMonthlyDue(MonthlyDue monthlyDue) {
         log.info("Creating manual monthly due for flat ID: {} with amount: {}", 
                 monthlyDue.getFlat().getId(), monthlyDue.getDueAmount());
@@ -273,6 +282,7 @@ public class MonthlyDueService implements IMonthlyDueService {
      * @param monthlyDue Monthly due with updates
      * @return Updated monthly due
      */
+    @CacheEvict(value = {"debtorList", "flatBalance"}, allEntries = true)
     public MonthlyDue updateMonthlyDue(MonthlyDue monthlyDue) {
         log.info("Updating monthly due ID: {}", monthlyDue.getId());
         

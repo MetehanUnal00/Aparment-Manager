@@ -10,6 +10,7 @@ import com.example.apartmentmanagerapi.repository.ApartmentBuildingRepository;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -148,6 +149,7 @@ public class FlatService implements IFlatService {
      * Includes current balance and recent payment history
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "buildingFinancials", key = "'flat-financial-' + #buildingId + '-' + #flatId")
     public Map<String, Object> getFlatWithFinancialInfo(Long buildingId, Long flatId) {
         // Find the flat
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
