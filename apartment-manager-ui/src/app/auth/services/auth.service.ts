@@ -78,38 +78,38 @@ export class AuthService {
   }
 
   logout(): void {
-    if (this.isBrowser) { // Check before accessing sessionStorage
-      window.sessionStorage.removeItem(this.TOKEN_KEY);
-      window.sessionStorage.removeItem(this.USER_KEY);
+    if (this.isBrowser) { // Check before accessing localStorage
+      window.localStorage.removeItem(this.TOKEN_KEY);
+      window.localStorage.removeItem(this.USER_KEY);
     }
     this.currentUserSubject.next(null);
     this.router.navigate(['/auth/login']);
   }
 
   public saveToken(token: string): void {
-    if (this.isBrowser) { // Check before accessing sessionStorage
-      window.sessionStorage.removeItem(this.TOKEN_KEY);
-      window.sessionStorage.setItem(this.TOKEN_KEY, token);
+    if (this.isBrowser) { // Check before accessing localStorage
+      window.localStorage.removeItem(this.TOKEN_KEY);
+      window.localStorage.setItem(this.TOKEN_KEY, token);
     }
   }
 
   public getToken(): string | null {
-    if (this.isBrowser) { // Check before accessing sessionStorage
-      return window.sessionStorage.getItem(this.TOKEN_KEY);
+    if (this.isBrowser) { // Check before accessing localStorage
+      return window.localStorage.getItem(this.TOKEN_KEY);
     }
     return null;
   }
 
   public saveUser(user: JwtResponse): void {
-    if (this.isBrowser) { // Check before accessing sessionStorage
-      window.sessionStorage.removeItem(this.USER_KEY);
-      window.sessionStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    if (this.isBrowser) { // Check before accessing localStorage
+      window.localStorage.removeItem(this.USER_KEY);
+      window.localStorage.setItem(this.USER_KEY, JSON.stringify(user));
     }
   }
 
   public getUser(): JwtResponse | null {
-    if (this.isBrowser) { // Check before accessing sessionStorage
-      const user = window.sessionStorage.getItem(this.USER_KEY);
+    if (this.isBrowser) { // Check before accessing localStorage
+      const user = window.localStorage.getItem(this.USER_KEY);
       if (user) {
         return JSON.parse(user);
       }

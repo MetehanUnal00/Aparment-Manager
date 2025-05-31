@@ -31,3 +31,4 @@ apartment-manager-ui/browserslist # If generated
 
 /docs
 /claude.md
+/node_modules

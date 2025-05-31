@@ -1,0 +1,249 @@
+<div class="dashboard-overview">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading dashboard data...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!loading && errorMessage" class="alert alert-danger" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!loading && !errorMessage">
+    <!-- Building Selector -->
+    <div class="row mb-4" *ngIf="buildings.length > 1">
+      <div class="col-md-4">
+        <label for="buildingSelect" class="form-label">Select Building:</label>
+        <select 
+          id="buildingSelect" 
+          class="form-select"
+          [(ngModel)]="selectedBuildingId"
+          (change)="onBuildingChange($any($event.target).value)"
+        >
+          <option *ngFor="let building of buildings" [value]="building.id">
+            {{ building.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Summary Cards Row 1 -->
+    <div class="row g-3 mb-4">
+      <!-- Total Buildings Card -->
+      <div class="col-md-3">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="card-subtitle mb-2 text-muted">Total Buildings</h6>
+                <h3 class="card-title mb-0">{{ summary.totalBuildings }}</h3>
+              </div>
+              <div class="icon-container">
+                <i class="bi bi-building fs-1 text-primary"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Flats Card -->
+      <div class="col-md-3">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="card-subtitle mb-2 text-muted">Total Flats</h6>
+                <h3 class="card-title mb-0">{{ summary.totalFlats }}</h3>
+                <small class="text-success">{{ summary.occupiedFlats }} occupied</small>
+              </div>
+              <div class="icon-container">
+                <i class="bi bi-house-door fs-1 text-info"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Occupancy Rate Card -->
+      <div class="col-md-3">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="card-subtitle mb-2 text-muted">Occupancy Rate</h6>
+                <h3 class="card-title mb-0">{{ occupancyRate }}%</h3>
+                <div class="progress mt-2" style="height: 6px;">
+                  <div 
+                    class="progress-bar"
+                    [class.bg-success]="occupancyRate >= 80"
+                    [class.bg-warning]="occupancyRate >= 60 && occupancyRate < 80"
+                    [class.bg-danger]="occupancyRate < 60"
+                    [style.width.%]="occupancyRate"
+                  ></div>
+                </div>
+              </div>
+              <div class="icon-container">
+                <i class="bi bi-people-fill fs-1 text-success"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collection Rate Card -->
+      <div class="col-md-3">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="card-subtitle mb-2 text-muted">Collection Rate</h6>
+                <h3 class="card-title mb-0" [ngClass]="getCollectionRateClass()">
+                  {{ summary.collectionRate.toFixed(1) }}%
+                </h3>
+                <small class="text-muted">This month</small>
+              </div>
+              <div class="icon-container">
+                <i class="bi bi-graph-up-arrow fs-1" [ngClass]="getCollectionRateClass()"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Cards Row 2 -->
+    <div class="row g-3 mb-4">
+      <!-- Monthly Income Target Card -->
+      <div class="col-md-3">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="card-subtitle mb-2 text-muted">Income Target</h6>
+                <h3 class="card-title mb-0">{{ formatCurrency(summary.monthlyIncomeTarget) }}</h3>
+                <small class="text-muted">Monthly</small>
+              </div>
+              <div class="icon-container">
+                <i class="bi bi-bullseye fs-1 text-warning"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Collection Card -->
+      <div class="col-md-3">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="card-subtitle mb-2 text-muted">Collected</h6>
+                <h3 class="card-title mb-0">{{ formatCurrency(summary.currentMonthCollection) }}</h3>
+                <small [ngClass]="summary.currentMonthCollection >= summary.monthlyIncomeTarget ? 'text-success' : 'text-warning'">
+                  {{ collectionEfficiency }} of target
+                </small>
+              </div>
+              <div class="icon-container">
+                <i class="bi bi-cash-stack fs-1 text-success"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Debt Card -->
+      <div class="col-md-3">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="card-subtitle mb-2 text-muted">Total Debt</h6>
+                <h3 class="card-title mb-0 text-danger">{{ formatCurrency(summary.totalDebt) }}</h3>
+                <small class="text-muted">{{ summary.unpaidDuesCount }} unpaid dues</small>
+              </div>
+              <div class="icon-container">
+                <i class="bi bi-exclamation-circle fs-1 text-danger"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Expenses Card -->
+      <div class="col-md-3">
+        <div class="card summary-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="card-subtitle mb-2 text-muted">Expenses</h6>
+                <h3 class="card-title mb-0">{{ formatCurrency(summary.currentMonthExpenses) }}</h3>
+                <small class="text-muted">This month</small>
+              </div>
+              <div class="icon-container">
+                <i class="bi bi-receipt fs-1 text-secondary"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Information Row -->
+    <div class="row g-3">
+      <!-- Expense Categories -->
+      <div class="col-md-6" *ngIf="expenseCategories.length > 0">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Expense Breakdown</h5>
+          </div>
+          <div class="card-body">
+            <div class="expense-categories">
+              <div *ngFor="let category of expenseCategories" class="mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>{{ category.category }}</span>
+                  <span class="fw-bold">{{ formatCurrency(category.totalAmount) }}</span>
+                </div>
+                <div class="progress" style="height: 8px;">
+                  <div 
+                    class="progress-bar bg-info" 
+                    [style.width.%]="category.percentage"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Quick Actions</h5>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary" routerLink="/payments/new">
+                <i class="bi bi-plus-circle me-2"></i>Record Payment
+              </button>
+              <button class="btn btn-accent" routerLink="/expenses/new">
+                <i class="bi bi-receipt-cutoff me-2"></i>Add Expense
+              </button>
+              <button class="btn btn-warning" routerLink="/dashboard/debtors">
+                <i class="bi bi-person-x me-2"></i>View Debtors
+              </button>
+              <button class="btn btn-success" (click)="loadDashboardData()">
+                <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

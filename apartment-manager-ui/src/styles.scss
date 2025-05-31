@@ -1,15 +1,312 @@
 /* You can add global styles to this file, and also import other style files */
-body {
-  font-family: Arial, sans-serif;
+
+// Import Bootstrap (make sure bootstrap is installed via npm)
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+
+// Custom Color Palette
+// Primary Colors
+$dark-navy: #0a0e1a;
+$bright-cyan: #00d4ff;
+$electric-blue: #4dabf7;
+
+// Secondary Colors
+$pink-magenta: #e64980;
+$lime-green: #51cf66;
+$warm-gray: #868e96;
+$pure-white: #ffffff;
+
+// Status/Indicator Colors
+$success-green: #51cf66;
+$warning-orange: #fd7e14;
+$info-blue: #339af0;
+$danger-red: #ff6b6b;
+
+// UI Element Colors
+$card-bg-dark: #1a1d29;
+$border-subtle: #2c2e33;
+$hover-overlay: rgba(255, 255, 255, 0.1);
+
+// Override Bootstrap theme colors
+$primary: $electric-blue;
+$secondary: $warm-gray;
+$success: $success-green;
+$info: $info-blue;
+$warning: $warning-orange;
+$danger: $danger-red;
+$light: $pure-white;
+$dark: $dark-navy;
+
+// Override Bootstrap component variables
+$body-bg: $dark-navy;
+$body-color: $pure-white;
+$card-bg: $card-bg-dark;
+$card-border-color: $border-subtle;
+$input-bg: $card-bg-dark;
+$input-border-color: $border-subtle;
+$input-color: $pure-white;
+$input-placeholder-color: $warm-gray;
+
+// Import Bootstrap after custom variables
+@import 'bootstrap/scss/bootstrap';
+
+// Import Bootstrap Icons (make sure bootstrap-icons is installed via npm)
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+// Global styles
+html, body {
+  height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #f4f4f4;
-  color: #333;
 }
 
-.container { // A general container class if you need one
-  width: 80%;
-  margin: auto;
-  overflow: hidden;
-  padding: 0 20px;
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: $dark-navy;
+  color: $pure-white;
+  line-height: 1.6;
+}
+
+// Angular specific
+app-root {
+  display: block;
+  min-height: 100vh;
+}
+
+// Custom utility classes
+.bg-dark-navy { background-color: $dark-navy !important; }
+.bg-card-dark { background-color: $card-bg-dark !important; }
+.bg-bright-cyan { background-color: $bright-cyan !important; }
+.bg-electric-blue { background-color: $electric-blue !important; }
+.bg-pink-magenta { background-color: $pink-magenta !important; }
+
+.text-bright-cyan { color: $bright-cyan !important; }
+.text-electric-blue { color: $electric-blue !important; }
+.text-pink-magenta { color: $pink-magenta !important; }
+.text-warm-gray { color: $warm-gray !important; }
+
+.border-subtle { border-color: $border-subtle !important; }
+
+// Custom component styles
+.card {
+  background-color: $card-bg-dark;
+  border: 1px solid $border-subtle;
+  color: $pure-white;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba($bright-cyan, 0.3);
+    box-shadow: 0 4px 12px rgba($bright-cyan, 0.1);
+  }
+
+  .card-header {
+    background-color: rgba($dark-navy, 0.5);
+    border-bottom: 1px solid $border-subtle;
+  }
+}
+
+// Custom button styles
+.btn {
+  border: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+
+  &.btn-primary {
+    background-color: $electric-blue;
+    color: $pure-white;
+
+    &:hover {
+      background-color: lighten($electric-blue, 10%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba($electric-blue, 0.3);
+    }
+  }
+
+  &.btn-accent {
+    background-color: $pink-magenta;
+    color: $pure-white;
+
+    &:hover {
+      background-color: lighten($pink-magenta, 10%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba($pink-magenta, 0.3);
+    }
+  }
+
+  &.btn-success {
+    background-color: $success-green;
+    color: $pure-white;
+
+    &:hover {
+      background-color: lighten($success-green, 10%);
+    }
+  }
+
+  &.btn-outline-primary {
+    color: $electric-blue;
+    border: 1px solid $electric-blue;
+    background-color: transparent;
+
+    &:hover {
+      background-color: $electric-blue;
+      color: $pure-white;
+    }
+  }
+
+  &.btn-outline-light {
+    color: $pure-white;
+    border: 1px solid rgba($pure-white, 0.5);
+    background-color: transparent;
+
+    &:hover {
+      background-color: rgba($pure-white, 0.1);
+      border-color: $pure-white;
+    }
+  }
+}
+
+// Form controls
+.form-control,
+.form-select {
+  background-color: $card-bg-dark;
+  border: 1px solid $border-subtle;
+  color: $pure-white;
+
+  &:focus {
+    background-color: $card-bg-dark;
+    border-color: $bright-cyan;
+    color: $pure-white;
+    box-shadow: 0 0 0 0.25rem rgba($bright-cyan, 0.25);
+  }
+
+  &::placeholder {
+    color: $warm-gray;
+  }
+}
+
+// Tables
+.table {
+  color: $pure-white;
+
+  thead {
+    border-bottom: 2px solid $border-subtle;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid $border-subtle;
+
+    &:hover {
+      background-color: rgba($bright-cyan, 0.05);
+    }
+  }
+}
+
+// Alerts
+.alert {
+  border: none;
+  
+  &.alert-success {
+    background-color: rgba($success-green, 0.1);
+    color: $success-green;
+    border-left: 4px solid $success-green;
+  }
+
+  &.alert-danger {
+    background-color: rgba($danger-red, 0.1);
+    color: $danger-red;
+    border-left: 4px solid $danger-red;
+  }
+
+  &.alert-warning {
+    background-color: rgba($warning-orange, 0.1);
+    color: $warning-orange;
+    border-left: 4px solid $warning-orange;
+  }
+
+  &.alert-info {
+    background-color: rgba($info-blue, 0.1);
+    color: $info-blue;
+    border-left: 4px solid $info-blue;
+  }
+}
+
+// Progress bars
+.progress {
+  background-color: $border-subtle;
+  
+  .progress-bar {
+    background-color: $bright-cyan;
+  }
+}
+
+// Badges
+.badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}
+
+// Navigation
+.nav-tabs {
+  border-bottom: 1px solid $border-subtle;
+
+  .nav-link {
+    color: $warm-gray;
+    border: none;
+    background-color: transparent;
+
+    &:hover {
+      color: $bright-cyan;
+      border-color: transparent;
+    }
+
+    &.active {
+      color: $bright-cyan;
+      background-color: transparent;
+      border-bottom: 3px solid $bright-cyan;
+    }
+  }
+}
+
+// Spinners
+.spinner-border {
+  color: $bright-cyan;
+}
+
+// Custom scrollbar
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: $dark-navy;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $border-subtle;
+  border-radius: 4px;
+
+  &:hover {
+    background: $warm-gray;
+  }
+}
+
+// Utility classes
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.hover-lift {
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+// Responsive utilities
+@media (max-width: 768px) {
+  .container {
+    padding: 0 15px;
+  }
 }

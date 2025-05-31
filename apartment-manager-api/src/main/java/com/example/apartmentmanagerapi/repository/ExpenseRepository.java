@@ -227,10 +227,4 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
             @Param("endDate") LocalDate endDate
     );
     
-    /**
-     * Find all recurring expenses for a building
-     * @param buildingId The building ID
-     * @return List of recurring expenses
-     */
-    List<Expense> findByApartmentBuildingIdAndIsRecurringTrue(Long buildingId);
 }

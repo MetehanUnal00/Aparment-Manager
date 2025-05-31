@@ -212,7 +212,7 @@ public class ExpenseService {
     @Transactional(readOnly = true)
     public List<Expense> getRecurringExpenses(Long buildingId) {
         log.debug("Retrieving recurring expenses for building ID: {}", buildingId);
-        return expenseRepository.findByApartmentBuildingIdAndIsRecurringTrue(buildingId);
+        return expenseRepository.findByBuildingIdAndIsRecurringTrue(buildingId);
     }
     
     /**

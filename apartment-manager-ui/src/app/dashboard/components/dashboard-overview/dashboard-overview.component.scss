@@ -1,0 +1,174 @@
+.dashboard-overview {
+  padding: 20px 0;
+
+  .summary-card {
+    background-color: #1a1d29; // card-bg-dark
+    border: 1px solid #2c2e33; // border-subtle
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    overflow: hidden;
+
+    &:hover {
+      transform: translateY(-2px);
+      border-color: rgba(#00d4ff, 0.3); // bright-cyan
+      box-shadow: 0 8px 24px rgba(#00d4ff, 0.1);
+    }
+
+    .card-body {
+      padding: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .card-subtitle {
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #868e96; // warm-gray
+    }
+
+    .icon-container {
+      opacity: 0.15;
+
+      i {
+        &.text-primary { color: #4dabf7 !important; }
+        &.text-info { color: #339af0 !important; }
+        &.text-success { color: #51cf66 !important; }
+        &.text-warning { color: #fd7e14 !important; }
+        &.text-danger { color: #ff6b6b !important; }
+        &.text-secondary { color: #868e96 !important; }
+      }
+    }
+
+    small {
+      color: #868e96; // warm-gray
+      
+      &.text-success { color: #51cf66 !important; }
+      &.text-warning { color: #fd7e14 !important; }
+    }
+  }
+
+  .progress {
+    background-color: #2c2e33; // border-subtle
+    height: 6px;
+
+    .progress-bar {
+      &.bg-success { background-color: #51cf66 !important; }
+      &.bg-warning { background-color: #fd7e14 !important; }
+      &.bg-danger { background-color: #ff6b6b !important; }
+    }
+  }
+
+  .expense-categories {
+    .progress {
+      margin-top: 4px;
+      margin-bottom: 8px;
+      background-color: #2c2e33;
+
+      .progress-bar.bg-info {
+        background-color: #339af0 !important;
+      }
+    }
+  }
+
+  // Utility classes for text colors with our palette
+  .text-success { color: #51cf66 !important; }
+  .text-warning { color: #fd7e14 !important; }
+  .text-danger { color: #ff6b6b !important; }
+  .text-info { color: #339af0 !important; }
+  .text-primary { color: #4dabf7 !important; }
+  .text-secondary { color: #868e96 !important; }
+
+  // Card styles
+  .card {
+    background-color: #1a1d29;
+    border: 1px solid #2c2e33;
+    color: #ffffff;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: rgba(#00d4ff, 0.3);
+      box-shadow: 0 8px 24px rgba(#00d4ff, 0.1);
+    }
+
+    .card-header {
+      background-color: rgba(#0a0e1a, 0.5);
+      border-bottom: 1px solid #2c2e33;
+      
+      h5 {
+        color: #00d4ff; // bright-cyan
+        margin: 0;
+      }
+    }
+  }
+
+  // Quick actions buttons
+  .btn {
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    
+    i {
+      font-size: 1.1rem;
+    }
+
+    &.btn-primary {
+      background-color: #4dabf7;
+      border-color: #4dabf7;
+
+      &:hover {
+        background-color: lighten(#4dabf7, 10%);
+        border-color: lighten(#4dabf7, 10%);
+      }
+    }
+
+    &.btn-info {
+      background-color: #339af0;
+      border-color: #339af0;
+
+      &:hover {
+        background-color: lighten(#339af0, 10%);
+        border-color: lighten(#339af0, 10%);
+      }
+    }
+
+    &.btn-warning {
+      background-color: #fd7e14;
+      border-color: #fd7e14;
+      color: #ffffff;
+
+      &:hover {
+        background-color: lighten(#fd7e14, 10%);
+        border-color: lighten(#fd7e14, 10%);
+      }
+    }
+
+    &.btn-success {
+      background-color: #51cf66;
+      border-color: #51cf66;
+
+      &:hover {
+        background-color: lighten(#51cf66, 10%);
+        border-color: lighten(#51cf66, 10%);
+      }
+    }
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    .summary-card {
+      margin-bottom: 1rem;
+
+      .card-title {
+        font-size: 1.5rem;
+      }
+
+      .icon-container {
+        display: none;
+      }
+    }
+  }
+}
