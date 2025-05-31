@@ -29,8 +29,8 @@ public class JwtAuthTokenFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+        HttpServletResponse response,
+        FilterChain filterChain) throws ServletException, IOException {
         try {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtil.validateToken(jwt, loadUserDetailsByToken(jwt))) { // Small change here to avoid loading user twice

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,28 @@ public class ApartmentBuilding {
 
     @OneToMany(mappedBy = "apartmentBuilding", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Flat> flats = new ArrayList<>();
+    
+    /**
+     * List of user assignments for this building
+     * Multiple managers can be assigned to this building
+     */
+    @OneToMany(mappedBy = "building", fetch = FetchType.LAZY)
+    private List<UserBuildingAssignment> userAssignments = new ArrayList<>();
+    
+    /**
+     * List of expenses for this building
+     * One building can have many expenses
+     */
+    @OneToMany(mappedBy = "building", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Expense> expenses = new ArrayList<>();
+    
+    /**
+     * Default monthly maintenance fee for flats in this building
+     * Used for automatic monthly due generation
+     * Can be null if building doesn't have automatic generation enabled
+     */
+    @Column(name = "default_monthly_fee", precision = 10, scale = 2)
+    private BigDecimal defaultMonthlyFee;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -104,5 +127,50 @@ public class ApartmentBuilding {
     public void removeFlat(Flat flat) {
         flats.remove(flat);
         flat.setApartmentBuilding(null);
+    }
+    
+    public List<UserBuildingAssignment> getUserAssignments() {
+        return userAssignments;
+    }
+    
+    public void setUserAssignments(List<UserBuildingAssignment> userAssignments) {
+        this.userAssignments = userAssignments;
+    }
+    
+    public List<Expense> getExpenses() {
+        return expenses;
+    }
+    
+    public void setExpenses(List<Expense> expenses) {
+        this.expenses = expenses;
+    }
+    
+    public BigDecimal getDefaultMonthlyFee() {
+        return defaultMonthlyFee;
+    }
+    
+    public void setDefaultMonthlyFee(BigDecimal defaultMonthlyFee) {
+        this.defaultMonthlyFee = defaultMonthlyFee;
+    }
+    
+    /**
+     * Helper method to get active user assignments
+     * @return List of currently active assignments only
+     */
+    public List<UserBuildingAssignment> getActiveUserAssignments() {
+        return userAssignments.stream()
+                .filter(UserBuildingAssignment::isCurrentlyActive)
+                .toList();
+    }
+    
+    /**
+     * Helper method to check if a specific user manages this building
+     * @param userId The user ID to check
+     * @return true if the user has an active assignment to this building
+     */
+    public boolean isManagedByUser(Long userId) {
+        return userAssignments.stream()
+                .filter(UserBuildingAssignment::isCurrentlyActive)
+                .anyMatch(assignment -> assignment.getUser().getId().equals(userId));
     }
 }

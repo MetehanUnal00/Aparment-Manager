@@ -28,3 +28,6 @@ apartment-manager-ui/browserslist # If generated
 *.user
 *.userosscache
 *.sln.docstates
+
+/docs
+/claude.md

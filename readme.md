@@ -32,8 +32,7 @@ These will be our primary JPA entities in the Spring Boot backend.
   - id (Long, Primary Key, Auto-generated)
   - flatNumber (String, Not Null, e.g., "A101", "2B")
   - apartmentBuilding (ApartmentBuilding, ManyToOne relationship, Not Null) - If not using ApartmentBuilding , this might be simplified.
-  - tenantName (String) - Or could be a User entity if tenants also log in. For now, let's keep it simple.
-  - tenantContact (String)
+  - tenant (Tenant, OneToOne relationship, optional, CascadeType.ALL might be useful here)
   - monthlyRent (BigDecimal) - Or monthlyDues
   - notes (String, optional)
   - createdAt (Timestamp)
@@ -50,6 +49,15 @@ These will be our primary JPA entities in the Spring Boot backend.
   - paymentMethod (String, e.g., "Cash", "Bank Transfer")
   - notes (String, optional)
   - recordedBy (User, ManyToOne relationship - the manager who recorded it)
+  - createdAt (Timestamp)
+  - updatedAt (Timestamp)
+- Tenant
+  - id (Long, Primary Key, Auto-generated)
+  - firstName (String, Not Null)
+  - lastName (String, Not Null)
+  - contactNumber (String)
+  - email (String, Optional) - For communication, not login
+  - flat (Flat, OneToOne relationship, mappedBy="tenant") - Indicates which flat they occupy
   - createdAt (Timestamp)
   - updatedAt (Timestamp)
 - Expense (Represents an expense for the apartment management)
@@ -92,13 +100,14 @@ All endpoints will be prefixed with /api . We'll use JWT for authentication.
   - DELETE /{id} : (Requires Auth: MANAGER) -> Success/Error
 - Flats ( /api/flats )
   
-  - POST / : (Requires Auth: MANAGER) { flatNumber, apartmentBuildingId (if applicable), tenantName, monthlyRent } -> { flatDetails }
+  - POST / : (Requires Auth: MANAGER) { flatNumber, apartmentBuildingId (if applicable), monthlyRent, tenant: { firstName, lastName, contactNumber, email (optional) } } -> { flatDetailsIncludingTenant }
   - GET / : (Requires Auth: MANAGER) -> List
-    (with query params for filtering, e.g., ?buildingId=X )
+    (with query params for filtering, e.g., ?buildingId=X ) (Response should include tenant summary)
   - GET /debtors : (Requires Auth: MANAGER) -> List
-  - GET /{id} : (Requires Auth: MANAGER) -> { flatDetails }
-  - PUT /{id} : (Requires Auth: MANAGER) { flatNumber, tenantName, monthlyRent } -> { updatedFlatDetails }
-  - DELETE /{id} : (Requires Auth: MANAGER) -> Success/Error
+    (Response should include tenant summary)
+  - GET /{id} : (Requires Auth: MANAGER) -> { flatDetailsIncludingTenant }
+  - PUT /{id} : (Requires Auth: MANAGER) { flatNumber, monthlyRent, tenant: { firstName, lastName, contactNumber, email (optional) } } -> { updatedFlatDetailsIncludingTenant }
+  - DELETE /{id} : (Requires Auth: MANAGER) -> Success/Error (Consider implications for the tenant record - e.g., disassociate or soft delete tenant)
 - Payments ( /api/payments )
   
   - POST / : (Requires Auth: MANAGER) { flatId, amount, paymentDate, paymentForMonth, paymentMethod } -> { paymentDetails }
@@ -136,15 +145,15 @@ All endpoints will be prefixed with /api . We'll use JWT for authentication.
   
   1. Manager logs in.
   2. Navigates to "Flats Management" or "Register New Flat" section.
-  3. Fills in flat details (number, tenant info, monthly rent/dues).
+  3. Fills in flat details (number, monthly rent/dues) and tenant details (first name, last name, contact number, email).
   4. Submits the form.
-  5. System saves the new flat to the database.
+  5. System saves the new flat and associated tenant to the database.
   6. Confirmation message is shown.
 - Manager Records a Payment:
   
   1. Manager logs in.
   2. Navigates to "Payments" or "Dashboard" (where debtors might be listed).
-  3. Selects a flat or tenant.
+  3. Selects a flat (which will show associated tenant information).
   4. Clicks "Record Payment".
   5. Enters payment details (amount, date, month paid for, method).
   6. Submits the form.
@@ -192,10 +201,12 @@ Epic: Dashboard
 - As a Manager, I want the dashboard to show a summary of total income and expenses for the current period. (Backend & Frontend) - e.g., 5
 Epic: Apartment & Flat Management
 
-- As a Manager, I want to register new apartments/flats in the database. (Backend & Frontend) - e.g., 8
-- As a Manager, I want to view a list of all registered flats. (Backend & Frontend) - e.g., 3
-- As a Manager, I want to edit details of an existing flat. (Backend & Frontend) - e.g., 5
-- As a Manager, I want to delete a flat (handle with care, consider deactivation). (Backend & Frontend) - e.g., 3
+- As a Manager, I want to register new apartments/flats in the database, including assigning a tenant. (Backend & Frontend) - e.g., 8 (effort might increase slightly)
+- As a Manager, I want to view a list of all registered flats, with tenant information. (Backend & Frontend) - e.g., 3
+- As a Manager, I want to edit details of an existing flat, including its tenant's information. (Backend & Frontend) - e.g., 5 (effort might increase slightly)
+- As a Manager, I want to delete a flat (handle with care, consider deactivation and tenant disassociation). (Backend & Frontend) - e.g., 3
+- Define and implement Tenant entity for tracking tenant information associated with a Flat. (Backend) - e.g., 3
+- Update Flat creation/update forms and display to include Tenant details. (Frontend) - e.g., 3
 Epic: Payment Management
 
 - As a Manager, I want to accept/record payments from tenants for their flats. (Backend & Frontend) - e.g., 8

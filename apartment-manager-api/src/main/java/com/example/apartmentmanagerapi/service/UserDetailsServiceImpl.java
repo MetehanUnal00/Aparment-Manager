@@ -26,10 +26,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
 
-        // For simplicity, we're creating a list with a single authority based on the user's role string.
-        // If you have a more complex role/permission system (e.g., User has a Set<Role> roles),
-        // you would map those roles to GrantedAuthority objects here.
-        List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(user.getRole()));
+        // Create authorities from the user's role enum
+        // The getRoleName() method returns the role with "ROLE_" prefix for Spring Security
+        List<GrantedAuthority> authorities = Collections.singletonList(
+                new SimpleGrantedAuthority(user.getRole().getRoleName())
+        );
 
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),

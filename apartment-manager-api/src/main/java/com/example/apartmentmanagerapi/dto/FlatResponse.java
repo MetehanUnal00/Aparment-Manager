@@ -1,5 +1,6 @@
 package com.example.apartmentmanagerapi.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class FlatResponse {
@@ -11,6 +12,16 @@ public class FlatResponse {
     private String apartmentBuildingName; // For convenience
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    // Tenant information fields
+    private String tenantName;
+    private String tenantContact;
+    private String tenantEmail;
+    private BigDecimal monthlyRent;
+    private BigDecimal securityDeposit;
+    private LocalDateTime tenantMoveInDate;
+    private Boolean isActive;
+    private BigDecimal currentBalance;
 
     // Constructor
     public FlatResponse(Long id, String flatNumber, Integer numberOfRooms, Double areaSqMeters,
@@ -89,5 +100,69 @@ public class FlatResponse {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    
+    public String getTenantName() {
+        return tenantName;
+    }
+    
+    public void setTenantName(String tenantName) {
+        this.tenantName = tenantName;
+    }
+    
+    public String getTenantContact() {
+        return tenantContact;
+    }
+    
+    public void setTenantContact(String tenantContact) {
+        this.tenantContact = tenantContact;
+    }
+    
+    public String getTenantEmail() {
+        return tenantEmail;
+    }
+    
+    public void setTenantEmail(String tenantEmail) {
+        this.tenantEmail = tenantEmail;
+    }
+    
+    public BigDecimal getMonthlyRent() {
+        return monthlyRent;
+    }
+    
+    public void setMonthlyRent(BigDecimal monthlyRent) {
+        this.monthlyRent = monthlyRent;
+    }
+    
+    public BigDecimal getSecurityDeposit() {
+        return securityDeposit;
+    }
+    
+    public void setSecurityDeposit(BigDecimal securityDeposit) {
+        this.securityDeposit = securityDeposit;
+    }
+    
+    public LocalDateTime getTenantMoveInDate() {
+        return tenantMoveInDate;
+    }
+    
+    public void setTenantMoveInDate(LocalDateTime tenantMoveInDate) {
+        this.tenantMoveInDate = tenantMoveInDate;
+    }
+    
+    public Boolean getIsActive() {
+        return isActive;
+    }
+    
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+    
+    public BigDecimal getCurrentBalance() {
+        return currentBalance;
+    }
+    
+    public void setCurrentBalance(BigDecimal currentBalance) {
+        this.currentBalance = currentBalance;
     }
 }

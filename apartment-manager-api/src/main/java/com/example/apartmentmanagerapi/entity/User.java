@@ -7,7 +7,9 @@ import lombok.AllArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection; // For Spring Security roles
+import java.util.List;
 
 // Spring Security specific imports - will be used later
 // import org.springframework.security.core.GrantedAuthority;
@@ -40,7 +42,20 @@ public class User { // Consider implementing UserDetails later for Spring Securi
 
     private String lastName;
 
-    private String role; // e.g., "ROLE_MANAGER", "ROLE_TENANT"
+    /**
+     * User role - using enum for type safety
+     * Supports ADMIN, MANAGER, and VIEWER roles as per requirements
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserRole role = UserRole.VIEWER; // Default to least privileged role
+    
+    /**
+     * List of building assignments for this user
+     * Managers can be assigned to multiple buildings
+     */
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<UserBuildingAssignment> buildingAssignments = new ArrayList<>();
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -48,6 +63,59 @@ public class User { // Consider implementing UserDetails later for Spring Securi
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+    
+    /**
+     * User roles supported by the system
+     */
+    public enum UserRole {
+        ADMIN("Admin"),         // Full system access
+        MANAGER("Manager"),     // Can manage assigned buildings
+        VIEWER("Viewer");       // Read-only access
+        
+        private final String displayName;
+        
+        UserRole(String displayName) {
+            this.displayName = displayName;
+        }
+        
+        public String getDisplayName() {
+            return displayName;
+        }
+        
+        /**
+         * Get the Spring Security role name
+         * @return Role name with ROLE_ prefix
+         */
+        public String getRoleName() {
+            return "ROLE_" + this.name();
+        }
+    }
+    
+    /**
+     * Helper method to check if user has admin role
+     * @return true if user is an admin
+     */
+    public boolean isAdmin() {
+        return role == UserRole.ADMIN;
+    }
+    
+    /**
+     * Helper method to check if user has manager role
+     * @return true if user is a manager
+     */
+    public boolean isManager() {
+        return role == UserRole.MANAGER;
+    }
+    
+    /**
+     * Helper method to get active building assignments
+     * @return List of active assignments only
+     */
+    public List<UserBuildingAssignment> getActiveBuildingAssignments() {
+        return buildingAssignments.stream()
+                .filter(UserBuildingAssignment::isCurrentlyActive)
+                .toList();
+    }
 
     // If you decide to integrate Spring Security's UserDetails directly:
     // @Override

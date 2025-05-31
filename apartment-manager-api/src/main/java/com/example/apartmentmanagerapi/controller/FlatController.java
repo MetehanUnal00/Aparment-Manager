@@ -5,20 +5,21 @@ import com.example.apartmentmanagerapi.dto.FlatResponse;
 import com.example.apartmentmanagerapi.dto.MessageResponse;
 import com.example.apartmentmanagerapi.service.FlatService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/apartment-buildings/{buildingId}/flats")
+@RequiredArgsConstructor
 public class FlatController {
 
-    @Autowired
-    private FlatService flatService;
+    private final FlatService flatService;
 
     @PostMapping
     @PreAuthorize("hasRole('MANAGER')")
@@ -85,6 +86,63 @@ public class FlatController {
         try {
             flatService.deleteFlat(buildingId, flatId);
             return ResponseEntity.ok(new MessageResponse("Flat deleted successfully!"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get active flats only
+     */
+    @GetMapping("/active")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+    public ResponseEntity<?> getActiveFlatsByBuilding(@PathVariable Long buildingId) {
+        try {
+            List<FlatResponse> flats = flatService.getActiveFlatsByBuildingId(buildingId);
+            return ResponseEntity.ok(flats);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get flat with financial information
+     */
+    @GetMapping("/{flatId}/financial-info")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+    public ResponseEntity<?> getFlatWithFinancialInfo(@PathVariable Long buildingId, @PathVariable Long flatId) {
+        try {
+            Map<String, Object> flatInfo = flatService.getFlatWithFinancialInfo(buildingId, flatId);
+            return ResponseEntity.ok(flatInfo);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Update tenant information only
+     */
+    @PutMapping("/{flatId}/tenant")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<?> updateTenantInfo(@PathVariable Long buildingId, @PathVariable Long flatId, 
+                                               @Valid @RequestBody FlatRequest request) {
+        try {
+            FlatResponse response = flatService.updateTenantInfo(buildingId, flatId, request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Deactivate a flat
+     */
+    @PutMapping("/{flatId}/deactivate")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+    public ResponseEntity<?> deactivateFlat(@PathVariable Long buildingId, @PathVariable Long flatId) {
+        try {
+            FlatResponse response = flatService.deactivateFlat(buildingId, flatId);
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }

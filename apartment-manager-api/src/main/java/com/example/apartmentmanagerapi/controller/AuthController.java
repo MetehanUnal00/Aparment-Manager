@@ -94,10 +94,10 @@ public class AuthController {
         user.setFirstName(signUpRequest.getFirstName());
         user.setLastName(signUpRequest.getLastName());
 
-        // Set a default role for new users, e.g., "ROLE_MANAGER" or "ROLE_TENANT"
-        // For now, let's assume new registrations are for managers.
-        // This should be configurable or based on the signup context in a real app.
-        user.setRole("ROLE_MANAGER"); // Default role
+        // Set a default role for new users
+        // For security, new users get VIEWER role by default
+        // Admins can later upgrade them to MANAGER role if needed
+        user.setRole(User.UserRole.VIEWER); // Default to least privileged role
 
         userRepository.save(user);
 

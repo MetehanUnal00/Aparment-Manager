@@ -12,4 +12,11 @@ public interface FlatRepository extends JpaRepository<Flat, Long> {
     List<Flat> findByApartmentBuildingId(Long buildingId);
     Optional<Flat> findByApartmentBuildingIdAndFlatNumber(Long buildingId, String flatNumber);
     Optional<Flat> findByApartmentBuildingIdAndId(Long buildingId, Long flatId);
+    
+    /**
+     * Find all active flats for a building
+     * @param buildingId The building ID
+     * @return List of active flats
+     */
+    List<Flat> findByApartmentBuildingIdAndIsActiveTrue(Long buildingId);
 }
