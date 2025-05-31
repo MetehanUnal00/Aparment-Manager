@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, tap, shareReplay, timer, switchMap, BehaviorSubject } from 'rxjs';
+import { Observable, tap, shareReplay, timer, switchMap, BehaviorSubject, map } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { 
@@ -22,7 +22,7 @@ export class FlatService {
   private readonly notification = inject(NotificationService);
   
   // API endpoints
-  private readonly baseUrl = '/flats';
+  private readonly baseUrl = '/apartment-buildings';
   
   // Cache for flats by building (key: buildingId)
   private flatsCache = new Map<number, {
@@ -79,14 +79,14 @@ export class FlatService {
         switchMap(() => pollingSubject.asObservable()),
         switchMap(isActive => 
           isActive 
-            ? this.api.get<FlatResponse[]>(`${this.baseUrl}/building/${buildingId}`)
+            ? this.api.get<FlatResponse[]>(`${this.baseUrl}/${buildingId}/flats`)
             : []
         ),
         shareReplay(1)
       );
     } else {
       // Single fetch with caching
-      return this.api.get<FlatResponse[]>(`${this.baseUrl}/building/${buildingId}`).pipe(
+      return this.api.get<FlatResponse[]>(`${this.baseUrl}/${buildingId}/flats`).pipe(
         tap(() => console.log(`Fetched flats for building ${buildingId}`)),
         shareReplay(1)
       );
@@ -107,20 +107,28 @@ export class FlatService {
 
   /**
    * Get a single flat by ID
+   * Note: This requires both buildingId and flatId in the actual API
    */
-  getFlat(id: number): Observable<FlatResponse> {
-    return this.api.get<FlatResponse>(`${this.baseUrl}/${id}`).pipe(
-      tap(flat => console.log(`Fetched flat ${id}:`, flat))
+  getFlat(buildingId: number, flatId: number): Observable<FlatResponse> {
+    return this.api.get<FlatResponse>(`${this.baseUrl}/${buildingId}/flats/${flatId}`).pipe(
+      tap(flat => console.log(`Fetched flat ${flatId}:`, flat))
     );
   }
 
   /**
    * Get flat balance
    * Balance is frequently accessed, cache for 2 minutes
+   * Note: The backend doesn't have a separate balance endpoint, it's part of flat response
    */
-  getFlatBalance(flatId: number): Observable<FlatBalance> {
-    return this.api.get<FlatBalance>(`${this.baseUrl}/${flatId}/balance`).pipe(
-      // Note: Backend might already cache this with @Cacheable
+  getFlatBalance(buildingId: number, flatId: number): Observable<FlatBalance> {
+    // Since there's no separate balance endpoint, get the flat data
+    return this.getFlat(buildingId, flatId).pipe(
+      map(flat => ({
+        flatId: flat.id,
+        currentBalance: flat.currentBalance || 0,
+        totalDues: 0, // Not provided in flat response
+        totalPayments: 0 // Not provided in flat response
+      } as FlatBalance)),
       tap(balance => console.log(`Flat ${flatId} balance:`, balance.currentBalance))
     );
   }
@@ -128,18 +136,19 @@ export class FlatService {
   /**
    * Get flat financial summary
    */
-  getFlatFinancialSummary(flatId: number): Observable<FlatFinancialSummary> {
-    return this.api.get<FlatFinancialSummary>(`${this.baseUrl}/${flatId}/financial-summary`);
+  getFlatFinancialSummary(buildingId: number, flatId: number): Observable<FlatFinancialSummary> {
+    return this.api.get<FlatFinancialSummary>(`${this.baseUrl}/${buildingId}/flats/${flatId}/financial-info`);
   }
 
   /**
    * Create a new flat
    */
   createFlat(flat: FlatRequest): Observable<FlatResponse> {
-    return this.api.post<FlatResponse>(this.baseUrl, flat).pipe(
+    const buildingId = flat.apartmentBuildingId;
+    return this.api.post<FlatResponse>(`${this.baseUrl}/${buildingId}/flats`, flat).pipe(
       tap(created => {
         this.notification.success(`Flat "${created.flatNumber}" created successfully`);
-        this.invalidateBuildingCache(flat.apartmentBuildingId);
+        this.invalidateBuildingCache(buildingId);
       })
     );
   }
@@ -147,11 +156,11 @@ export class FlatService {
   /**
    * Update an existing flat
    */
-  updateFlat(id: number, flat: FlatRequest): Observable<FlatResponse> {
-    return this.api.put<FlatResponse>(`${this.baseUrl}/${id}`, flat).pipe(
+  updateFlat(buildingId: number, flatId: number, flat: FlatRequest): Observable<FlatResponse> {
+    return this.api.put<FlatResponse>(`${this.baseUrl}/${buildingId}/flats/${flatId}`, flat).pipe(
       tap(updated => {
         this.notification.success(`Flat "${updated.flatNumber}" updated successfully`);
-        this.invalidateBuildingCache(updated.apartmentBuildingId);
+        this.invalidateBuildingCache(buildingId);
       })
     );
   }
@@ -159,12 +168,11 @@ export class FlatService {
   /**
    * Soft delete a flat (sets isActive = false)
    */
-  deleteFlat(id: number): Observable<void> {
-    return this.api.delete<void>(`${this.baseUrl}/${id}`).pipe(
+  deleteFlat(buildingId: number, flatId: number): Observable<void> {
+    return this.api.delete<void>(`${this.baseUrl}/${buildingId}/flats/${flatId}`).pipe(
       tap(() => {
         this.notification.success('Flat deactivated successfully');
-        // Note: We don't know the building ID here, so clear all caches
-        this.flatsCache.clear();
+        this.invalidateBuildingCache(buildingId);
       })
     );
   }

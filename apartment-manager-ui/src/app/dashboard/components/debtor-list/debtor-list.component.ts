@@ -330,25 +330,32 @@ export class DebtorListComponent implements OnInit, OnDestroy {
 
     this.sendingNotifications = true;
     
-    // For now, we'll use the sendReminders method which sends to all debtors
-    // In a future enhancement, we could add support for sending to selected debtors only
-    this.monthlyDueService.sendReminders(this.selectedBuildingId).subscribe({
-      next: (result) => {
-        this.notification.success(`Sent ${result.sent} reminder emails successfully`);
-        if (result.failed > 0) {
-          this.notification.warning(`Failed to send ${result.failed} emails`);
-        }
-        this.sendingNotifications = false;
-        this.selectedDebtors.clear();
-        // Refresh the debtor list
-        this.loadDebtors(true);
-      },
-      error: (error) => {
-        this.notification.error('Failed to send notifications. Please try again.');
-        this.sendingNotifications = false;
-        console.error('Error sending notifications:', error);
-      }
-    });
+    // TODO: Implement when backend endpoint is available
+    // For now, we'll simulate the notification sending
+    setTimeout(() => {
+      this.notification.info('Reminder notification feature is not yet implemented in the backend');
+      this.sendingNotifications = false;
+      this.selectedDebtors.clear();
+    }, 1000);
+    
+    // Original code commented out until backend endpoint is available:
+    // this.monthlyDueService.sendReminders(this.selectedBuildingId).subscribe({
+    //   next: (result: any) => {
+    //     this.notification.success(`Sent ${result.sent} reminder emails successfully`);
+    //     if (result.failed > 0) {
+    //       this.notification.warning(`Failed to send ${result.failed} emails`);
+    //     }
+    //     this.sendingNotifications = false;
+    //     this.selectedDebtors.clear();
+    //     // Refresh the debtor list
+    //     this.loadDebtors(true);
+    //   },
+    //   error: (error: any) => {
+    //     this.notification.error('Failed to send notifications. Please try again.');
+    //     this.sendingNotifications = false;
+    //     console.error('Error sending notifications:', error);
+    //   }
+    // });
   }
 
   /**

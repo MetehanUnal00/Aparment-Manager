@@ -3,6 +3,8 @@ import { RouterModule, Routes } from '@angular/router';
 import { DashboardComponent } from './dashboard.component';
 import { DashboardOverviewComponent } from './components/dashboard-overview/dashboard-overview.component';
 import { DebtorListComponent } from './components/debtor-list/debtor-list.component';
+import { ApartmentBuildingListComponent } from './components/apartment-building-list/apartment-building-list.component';
+import { ApartmentBuildingFormComponent } from './components/apartment-building-form/apartment-building-form.component';
 
 const routes: Routes = [
   {
@@ -11,7 +13,10 @@ const routes: Routes = [
     children: [
       { path: '', redirectTo: 'overview', pathMatch: 'full' },
       { path: 'overview', component: DashboardOverviewComponent },
-      { path: 'debtors', component: DebtorListComponent }
+      { path: 'debtors', component: DebtorListComponent },
+      { path: 'buildings', component: ApartmentBuildingListComponent },
+      { path: 'buildings/new', component: ApartmentBuildingFormComponent },
+      { path: 'buildings/:id/edit', component: ApartmentBuildingFormComponent }
     ]
   }
 ];

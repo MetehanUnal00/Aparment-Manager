@@ -69,10 +69,12 @@ export class ExpenseService {
 
   /**
    * Get expense by ID
+   * Note: This endpoint doesn't exist in the backend yet
+   * TODO: Implement when backend endpoint is available
    */
-  getExpense(id: number): Observable<ExpenseResponse> {
-    return this.api.get<ExpenseResponse>(`${this.baseUrl}/${id}`);
-  }
+  // getExpense(id: number): Observable<ExpenseResponse> {
+  //   return this.api.get<ExpenseResponse>(`${this.baseUrl}/${id}`);
+  // }
 
   /**
    * Get expense category summary for a building
@@ -88,14 +90,27 @@ export class ExpenseService {
     }
 
     // Create new cached observable
-    const summary$ = this.api.get<ExpenseCategorySummary[]>(
-      `${this.baseUrl}/category-summary/${buildingId}`
+    // Using the breakdown endpoint which returns category data
+    const summary$ = this.api.get<any>(
+      `${this.baseUrl}/building/${buildingId}/breakdown`
     ).pipe(
+      map(response => {
+        // Transform the response to match ExpenseCategorySummary[]
+        if (response.breakdown && Array.isArray(response.breakdown)) {
+          return response.breakdown.map((item: any) => ({
+            category: item.category,
+            categoryName: item.categoryName,
+            totalAmount: item.totalAmount,
+            count: item.count || 0
+          }));
+        }
+        return [];
+      }),
       tap(summary => {
         console.log(`Expense breakdown for building ${buildingId}:`, summary);
         // Log top categories
         const topCategories = summary
-          .sort((a, b) => b.totalAmount - a.totalAmount)
+          .sort((a: ExpenseCategorySummary, b: ExpenseCategorySummary) => b.totalAmount - a.totalAmount)
           .slice(0, 3);
         console.log('Top 3 expense categories:', topCategories);
       }),
@@ -125,8 +140,23 @@ export class ExpenseService {
     }
 
     // Create new cached observable
-    const url = `${this.baseUrl}/monthly-total/${buildingId}?year=${year}&month=${month}`;
-    const monthly$ = this.api.get<MonthlyExpenseSummary>(url).pipe(
+    // Using the monthly-trends endpoint which includes monthly data
+    const url = `${this.baseUrl}/building/${buildingId}/monthly-trends?months=1`;
+    const monthly$ = this.api.get<any>(url).pipe(
+      map(response => {
+        // Transform to match MonthlyExpenseSummary
+        const currentMonth = `${year}-${month.toString().padStart(2, '0')}`;
+        const monthData = response.monthlyTrends?.find((trend: any) => 
+          trend.month.startsWith(currentMonth)
+        );
+        return {
+          month: month.toString(),
+          year,
+          totalAmount: monthData?.total || 0,
+          expenseCount: 0, // Not provided by the API
+          byCategory: [] // Not provided by this endpoint
+        } as MonthlyExpenseSummary;
+      }),
       tap(summary => console.log(`Monthly expenses for ${year}-${month}:`, summary)),
       shareReplay(1)
     );
@@ -144,7 +174,7 @@ export class ExpenseService {
    * Get expense trends and analytics
    */
   getExpenseTrends(buildingId: number): Observable<ExpenseTrends> {
-    return this.api.get<ExpenseTrends>(`${this.baseUrl}/trends/${buildingId}`).pipe(
+    return this.api.get<ExpenseTrends>(`${this.baseUrl}/building/${buildingId}/trend-analysis`).pipe(
       tap(trends => {
         console.log(`Expense trends for building ${buildingId}:`, trends);
         if (trends.changePercentage > 10) {
@@ -203,7 +233,8 @@ export class ExpenseService {
    * Get recurring expenses for a building
    */
   getRecurringExpenses(buildingId: number): Observable<ExpenseResponse[]> {
-    return this.getExpensesByBuilding(buildingId, { isRecurring: true }).pipe(
+    return this.api.get<ExpenseResponse[]>(`${this.baseUrl}/building/${buildingId}/recurring`).pipe(
+      tap(expenses => console.log(`Found ${expenses.length} recurring expenses for building ${buildingId}`)),
       map(expenses => expenses.sort((a, b) => a.amount - b.amount))
     );
   }

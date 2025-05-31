@@ -1,0 +1,95 @@
+<div class="apartment-building-form">
+  <!-- Page header -->
+  <div class="page-header">
+    <h2>{{ pageTitle }}</h2>
+  </div>
+
+  <!-- Loading state -->
+  <app-loading-spinner 
+    *ngIf="isLoading"
+    message="Loading building details...">
+  </app-loading-spinner>
+
+  <!-- Form -->
+  <form 
+    #buildingForm="ngForm" 
+    (ngSubmit)="onSubmit(buildingForm)"
+    *ngIf="!isLoading"
+    class="building-form">
+    
+    <div class="form-card">
+      <!-- Building Name -->
+      <div class="form-group">
+        <label for="name" class="form-label required">
+          Building Name
+        </label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          class="form-control"
+          [(ngModel)]="formData.name"
+          #name="ngModel"
+          required
+          minlength="3"
+          maxlength="100"
+          placeholder="e.g., Sunset Towers"
+          [class.is-invalid]="name.invalid && name.touched">
+        
+        <app-form-errors
+          [errors]="name.errors"
+          [showErrors]="!!(name.invalid && name.touched)"
+          fieldName="Building name">
+        </app-form-errors>
+      </div>
+
+      <!-- Address -->
+      <div class="form-group">
+        <label for="address" class="form-label required">
+          Address
+        </label>
+        <textarea
+          id="address"
+          name="address"
+          class="form-control"
+          [(ngModel)]="formData.address"
+          #address="ngModel"
+          required
+          minlength="10"
+          maxlength="500"
+          rows="3"
+          placeholder="Enter the complete building address"
+          [class.is-invalid]="address.invalid && address.touched">
+        </textarea>
+        
+        <app-form-errors
+          [errors]="address.errors"
+          [showErrors]="!!(address.invalid && address.touched)"
+          fieldName="Address">
+        </app-form-errors>
+      </div>
+
+
+
+      <!-- Form actions -->
+      <div class="form-actions">
+        <app-button
+          variant="secondary"
+          type="button"
+          (click)="onCancel()"
+          [disabled]="isSubmitting">
+          Cancel
+        </app-button>
+        
+        <app-button
+          variant="cyan"
+          type="submit"
+          [disabled]="buildingForm.invalid || isSubmitting"
+          [loading]="isSubmitting">
+          <i class="bi bi-check-circle me-2"></i>
+          {{ isEditMode ? 'Update Building' : 'Create Building' }}
+        </app-button>
+      </div>
+    </div>
+  </form>
+</div>

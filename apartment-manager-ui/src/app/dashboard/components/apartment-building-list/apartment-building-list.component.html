@@ -1,0 +1,113 @@
+<div class="apartment-building-list">
+  <!-- Header with title and create button -->
+  <div class="page-header">
+    <h2>Apartment Buildings</h2>
+    <app-button 
+      variant="cyan"
+      (click)="createBuilding()">
+      <i class="bi bi-plus-circle me-2"></i>
+      New Building
+    </app-button>
+  </div>
+
+  <!-- Search box -->
+  <div class="search-section mb-4">
+    <app-search-box
+      placeholder="Search by name, address, or manager..."
+      (search)="filterBuildings($event)">
+    </app-search-box>
+  </div>
+
+  <!-- Loading state -->
+  <app-loading-spinner 
+    *ngIf="isLoading"
+    message="Loading buildings...">
+  </app-loading-spinner>
+
+  <!-- Empty state when no buildings -->
+  <app-empty-state
+    *ngIf="!isLoading && buildings.length === 0"
+    icon="bi-building"
+    title="No Buildings Found"
+    message="Start by creating your first apartment building.">
+    <app-button 
+      variant="cyan"
+      (click)="createBuilding()">
+      <i class="bi bi-plus-circle me-2"></i>
+      Create First Building
+    </app-button>
+  </app-empty-state>
+
+  <!-- Empty search results -->
+  <app-empty-state
+    *ngIf="!isLoading && buildings.length > 0 && filteredBuildings.length === 0"
+    icon="bi-search"
+    title="No Results Found"
+    message="Try adjusting your search criteria.">
+  </app-empty-state>
+
+  <!-- Buildings list -->
+  <div class="buildings-grid" *ngIf="!isLoading && filteredBuildings.length > 0">
+    <div class="building-card" *ngFor="let building of filteredBuildings">
+      <div class="building-header">
+        <h4>{{ building.name }}</h4>
+        <div class="building-actions">
+          <button 
+            class="icon-btn"
+            title="View Details"
+            (click)="viewBuilding(building)">
+            <i class="bi bi-eye"></i>
+          </button>
+          <button 
+            class="icon-btn"
+            title="Edit Building"
+            (click)="editBuilding(building)">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button 
+            class="icon-btn text-danger"
+            title="Delete Building"
+            (click)="confirmDelete(building)">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="building-info">
+        <div class="info-row">
+          <i class="bi bi-geo-alt"></i>
+          <span>{{ building.address }}</span>
+        </div>
+        
+        
+        <div class="info-row">
+          <i class="bi bi-calendar3"></i>
+          <span>Created: {{ building.createdAt | date:'short' }}</span>
+        </div>
+      </div>
+
+
+      <div class="building-footer">
+        <app-button 
+          variant="primary"
+          size="sm"
+          class="w-100"
+          (click)="viewBuilding(building)">
+          <i class="bi bi-arrow-right me-2"></i>
+          Manage Flats
+        </app-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation dialog -->
+  <app-confirm-dialog
+    *ngIf="showDeleteConfirm"
+    title="Delete Building"
+    [message]="'Are you sure you want to delete \'' + buildingToDelete?.name + '\'? This action cannot be undone and will delete all associated flats, payments, and dues.'"
+    confirmText="Delete"
+    confirmVariant="danger"
+    (confirm)="onDeleteConfirm()"
+    (cancel)="onDeleteCancel()">
+  </app-confirm-dialog>
+</div>

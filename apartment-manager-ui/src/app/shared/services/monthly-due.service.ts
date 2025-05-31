@@ -62,7 +62,7 @@ export class MonthlyDueService {
    * @param enablePolling Enable auto-refresh every 30 seconds
    */
   getOverdueDues(buildingId: number, enablePolling = false): Observable<OverdueSummary[]> {
-    const url = `${this.baseUrl}/overdue/${buildingId}`;
+    const url = `${this.baseUrl}/building/${buildingId}/overdue`;
     
     if (enablePolling) {
       // Poll every 30 seconds for dashboard
@@ -89,7 +89,7 @@ export class MonthlyDueService {
     }
 
     // Create new cached observable
-    const debtors$ = this.api.get<DebtorInfo[]>(`${this.baseUrl}/debtors/${buildingId}`).pipe(
+    const debtors$ = this.api.get<DebtorInfo[]>(`${this.baseUrl}/building/${buildingId}/debtors`).pipe(
       tap(debtors => {
         console.log(`Debtor report for building ${buildingId}: ${debtors.length} debtors`);
         // Calculate total debt
@@ -115,7 +115,7 @@ export class MonthlyDueService {
   generateMonthlyDues(request: MonthlyDueRequest): Observable<MonthlyDueResponse[]> {
     const buildingId = request.buildingId!;
     
-    return this.api.post<MonthlyDueResponse[]>(`${this.baseUrl}/generate/${buildingId}`, request).pipe(
+    return this.api.post<MonthlyDueResponse[]>(`${this.baseUrl}/generate`, request).pipe(
       tap(dues => {
         this.notification.success(`Generated ${dues.length} monthly dues successfully`);
         this.invalidateBuildingCache(buildingId);
@@ -138,37 +138,29 @@ export class MonthlyDueService {
   }
 
   /**
-   * Mark a monthly due as paid
+   * Update a monthly due
+   * Note: The backend doesn't have a specific "mark as paid" endpoint,
+   * so this updates the due with paid status
    */
-  markAsPaid(dueId: number): Observable<MonthlyDueResponse> {
-    return this.api.put<MonthlyDueResponse>(`${this.baseUrl}/${dueId}/paid`, {}).pipe(
+  updateMonthlyDue(dueId: number, request: MonthlyDueRequest): Observable<MonthlyDueResponse> {
+    return this.api.put<MonthlyDueResponse>(`${this.baseUrl}/${dueId}`, request).pipe(
       tap(updated => {
-        this.notification.success('Monthly due marked as paid');
+        this.notification.success('Monthly due updated successfully');
         // Clear all caches as we don't know the building ID
         this.debtorCache.clear();
       })
     );
   }
 
-  /**
-   * Update a monthly due
-   */
-  updateMonthlyDue(id: number, due: Partial<MonthlyDueRequest>): Observable<MonthlyDueResponse> {
-    return this.api.put<MonthlyDueResponse>(`${this.baseUrl}/${id}`, due).pipe(
-      tap(() => {
-        this.notification.success('Monthly due updated successfully');
-        this.debtorCache.clear(); // Clear all caches
-      })
-    );
-  }
 
   /**
-   * Delete a monthly due
+   * Cancel a monthly due
+   * Uses the DELETE endpoint with /cancel suffix
    */
-  deleteMonthlyDue(id: number): Observable<void> {
-    return this.api.delete<void>(`${this.baseUrl}/${id}`).pipe(
+  cancelMonthlyDue(id: number): Observable<void> {
+    return this.api.delete<void>(`${this.baseUrl}/${id}/cancel`).pipe(
       tap(() => {
-        this.notification.success('Monthly due deleted successfully');
+        this.notification.success('Monthly due cancelled successfully');
         this.debtorCache.clear(); // Clear all caches
       })
     );
@@ -176,18 +168,19 @@ export class MonthlyDueService {
 
   /**
    * Send reminder emails to debtors
-   * Loading state is automatically handled by the loading interceptor
+   * Note: This endpoint doesn't exist in the backend yet
+   * TODO: Implement when backend endpoint is available
    */
-  sendReminders(buildingId: number): Observable<{ sent: number; failed: number }> {
-    return this.api.post<{ sent: number; failed: number }>(`${this.baseUrl}/reminders/${buildingId}`, {}).pipe(
-      tap(result => {
-        this.notification.success(`Sent ${result.sent} reminder emails successfully`);
-        if (result.failed > 0) {
-          this.notification.warning(`Failed to send ${result.failed} emails`);
-        }
-      })
-    );
-  }
+  // sendReminders(buildingId: number): Observable<{ sent: number; failed: number }> {
+  //   return this.api.post<{ sent: number; failed: number }>(`${this.baseUrl}/reminders/${buildingId}`, {}).pipe(
+  //     tap(result => {
+  //       this.notification.success(`Sent ${result.sent} reminder emails successfully`);
+  //       if (result.failed > 0) {
+  //         this.notification.warning(`Failed to send ${result.failed} emails`);
+  //       }
+  //     })
+  //   );
+  // }
 
   /**
    * Format currency for display

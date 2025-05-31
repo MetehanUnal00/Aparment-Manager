@@ -88,7 +88,8 @@ export class PaymentService {
     }
 
     // Create new cached observable
-    const summary$ = this.api.get<PaymentSummary>(`${this.baseUrl}/summary/${buildingId}`).pipe(
+    // Note: Using statistics endpoint as there's no separate summary endpoint
+    const summary$ = this.api.get<PaymentSummary>(`${this.baseUrl}/building/${buildingId}/statistics`).pipe(
       tap(summary => console.log(`Payment summary for building ${buildingId}:`, summary)),
       shareReplay(1)
     );
@@ -104,19 +105,21 @@ export class PaymentService {
 
   /**
    * Get payment analytics
+   * Note: This endpoint doesn't exist in the backend yet
+   * TODO: Implement when backend endpoint is available
    */
-  getPaymentAnalytics(buildingId: number, dateRange?: DateRangeRequest): Observable<PaymentAnalytics> {
-    let url = `${this.baseUrl}/analytics/${buildingId}`;
-    
-    if (dateRange?.startDate || dateRange?.endDate) {
-      const params = new URLSearchParams();
-      if (dateRange.startDate) params.append('startDate', dateRange.startDate);
-      if (dateRange.endDate) params.append('endDate', dateRange.endDate);
-      url += `?${params.toString()}`;
-    }
-
-    return this.api.get<PaymentAnalytics>(url);
-  }
+  // getPaymentAnalytics(buildingId: number, dateRange?: DateRangeRequest): Observable<PaymentAnalytics> {
+  //   let url = `${this.baseUrl}/analytics/${buildingId}`;
+  //   
+  //   if (dateRange?.startDate || dateRange?.endDate) {
+  //     const params = new URLSearchParams();
+  //     if (dateRange.startDate) params.append('startDate', dateRange.startDate);
+  //     if (dateRange.endDate) params.append('endDate', dateRange.endDate);
+  //     url += `?${params.toString()}`;
+  //   }
+  //
+  //   return this.api.get<PaymentAnalytics>(url);
+  // }
 
   /**
    * Record a new payment
@@ -164,15 +167,17 @@ export class PaymentService {
 
   /**
    * Bulk record payments for multiple flats
+   * Note: This endpoint doesn't exist in the backend yet
+   * TODO: Implement when backend endpoint is available
    */
-  bulkCreatePayments(payments: PaymentRequest[]): Observable<PaymentResponse[]> {
-    return this.api.post<PaymentResponse[]>(`${this.baseUrl}/bulk`, payments).pipe(
-      tap(created => {
-        this.notification.success(`${created.length} payments recorded successfully`);
-        this.invalidateCache();
-      })
-    );
-  }
+  // bulkCreatePayments(payments: PaymentRequest[]): Observable<PaymentResponse[]> {
+  //   return this.api.post<PaymentResponse[]>(`${this.baseUrl}/bulk`, payments).pipe(
+  //     tap(created => {
+  //       this.notification.success(`${created.length} payments recorded successfully`);
+  //       this.invalidateCache();
+  //     })
+  //   );
+  // }
 
   /**
    * Format currency for display

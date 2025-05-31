@@ -1,0 +1,145 @@
+@import '../../../../styles';
+
+.apartment-building-list {
+  padding: 20px;
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+
+    h2 {
+      color: $pure-white;
+      margin: 0;
+      font-size: 28px;
+      font-weight: 500;
+    }
+  }
+
+  .search-section {
+    max-width: 500px;
+  }
+
+  .buildings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+  }
+
+  .building-card {
+    background: $card-bg-dark;
+    border: 1px solid $border-subtle;
+    border-radius: 12px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.1);
+      border-color: rgba(0, 212, 255, 0.3);
+    }
+
+    .building-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+
+      h4 {
+        color: $pure-white;
+        margin: 0;
+        font-size: 20px;
+        font-weight: 500;
+        flex: 1;
+      }
+
+      .building-actions {
+        display: flex;
+        gap: 8px;
+
+        .icon-btn {
+          background: transparent;
+          border: none;
+          color: $warm-gray;
+          padding: 8px;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: $pure-white;
+          }
+
+          &.text-danger:hover {
+            background: rgba(230, 73, 128, 0.2);
+            color: $pink-magenta;
+          }
+
+          i {
+            font-size: 16px;
+          }
+        }
+      }
+    }
+
+    .building-info {
+      margin-bottom: 20px;
+
+      .info-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        color: $warm-gray;
+        font-size: 14px;
+
+        i {
+          font-size: 16px;
+          color: $bright-cyan;
+          width: 20px;
+        }
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+
+
+    .building-footer {
+      margin-top: 20px;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .apartment-building-list {
+    padding: 16px;
+
+    .page-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+
+      h2 {
+        font-size: 24px;
+      }
+
+      app-button {
+        width: 100%;
+      }
+    }
+
+    .buildings-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .building-card {
+      padding: 20px;
+    }
+  }
+}
