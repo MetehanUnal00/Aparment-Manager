@@ -5,9 +5,11 @@ import com.example.apartmentmanagerapi.dto.ExpenseResponse;
 import com.example.apartmentmanagerapi.entity.ApartmentBuilding;
 import com.example.apartmentmanagerapi.entity.Expense;
 import com.example.apartmentmanagerapi.entity.User;
+import com.example.apartmentmanagerapi.mapper.ExpenseMapper;
 import com.example.apartmentmanagerapi.repository.ApartmentBuildingRepository;
+import com.example.apartmentmanagerapi.repository.ExpenseRepository;
 import com.example.apartmentmanagerapi.repository.UserRepository;
-import com.example.apartmentmanagerapi.service.ExpenseService;
+import com.example.apartmentmanagerapi.service.IExpenseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,9 +40,11 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "http://localhost:4200")
 public class ExpenseController {
     
-    private final ExpenseService expenseService;
+    private final IExpenseService expenseService;
     private final ApartmentBuildingRepository buildingRepository;
     private final UserRepository userRepository;
+    private final ExpenseRepository expenseRepository;
+    private final ExpenseMapper expenseMapper;
     
     /**
      * Create a new expense for a building.
@@ -67,26 +71,17 @@ public class ExpenseController {
         User currentUser = userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
-        // Build expense entity
-        Expense expense = Expense.builder()
-                .building(building)
-                .category(request.getCategory())
-                .amount(request.getAmount())
-                .expenseDate(request.getExpenseDate())
-                .description(request.getDescription())
-                .vendorName(request.getVendorName())
-                .invoiceNumber(request.getInvoiceNumber())
-                .isRecurring(request.getIsRecurring())
-                .recurrenceFrequency(request.getRecurrenceFrequency())
-                .recordedBy(currentUser)
-                .build();
+        // Convert request to entity using mapper
+        Expense expense = expenseMapper.toEntity(request);
+        expense.setBuilding(building); // Set the building relationship
+        expense.setRecordedBy(currentUser); // Set who recorded the expense
         
         // Create expense with optional distribution
         Expense createdExpense = expenseService.createExpense(expense, 
                 request.getDistributeToFlats() != null && request.getDistributeToFlats());
         
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ExpenseResponse.fromEntity(createdExpense));
+                .body(expenseMapper.toResponse(createdExpense));
     }
     
     /**
@@ -119,7 +114,7 @@ public class ExpenseController {
         }
         
         List<ExpenseResponse> responses = expenses.stream()
-                .map(ExpenseResponse::fromEntity)
+                .map(expenseMapper::toResponse)
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(responses);
@@ -142,7 +137,7 @@ public class ExpenseController {
         
         List<Expense> expenses = expenseService.getExpensesByBuildingAndCategory(buildingId, category);
         List<ExpenseResponse> responses = expenses.stream()
-                .map(ExpenseResponse::fromEntity)
+                .map(expenseMapper::toResponse)
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(responses);
@@ -252,7 +247,7 @@ public class ExpenseController {
         
         List<Expense> recurringExpenses = expenseService.getRecurringExpenses(buildingId);
         List<ExpenseResponse> responses = recurringExpenses.stream()
-                .map(ExpenseResponse::fromEntity)
+                .map(expenseMapper::toResponse)
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(responses);
@@ -295,20 +290,16 @@ public class ExpenseController {
         
         log.info("Updating expense ID: {}", expenseId);
         
-        // Build expense entity with updated fields
-        Expense expense = Expense.builder()
-                .id(expenseId)
-                .category(request.getCategory())
-                .amount(request.getAmount())
-                .description(request.getDescription())
-                .vendorName(request.getVendorName())
-                .invoiceNumber(request.getInvoiceNumber())
-                .isRecurring(request.getIsRecurring())
-                .build();
+        // Get existing expense first
+        Expense existingExpense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new RuntimeException("Expense not found"));
         
-        Expense updatedExpense = expenseService.updateExpense(expense);
+        // Update fields using mapper
+        expenseMapper.updateEntityFromRequest(request, existingExpense);
         
-        return ResponseEntity.ok(ExpenseResponse.fromEntity(updatedExpense));
+        Expense updatedExpense = expenseService.updateExpense(existingExpense);
+        
+        return ResponseEntity.ok(expenseMapper.toResponse(updatedExpense));
     }
     
     /**

@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
-public class ExpenseService {
+public class ExpenseService implements IExpenseService {
     
     private final ExpenseRepository expenseRepository;
     private final ApartmentBuildingRepository apartmentBuildingRepository;

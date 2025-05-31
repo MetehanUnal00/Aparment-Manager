@@ -1,6 +1,7 @@
 package com.example.apartmentmanagerapi.dto;
 
 import jakarta.validation.constraints.*;
+import com.example.apartmentmanagerapi.validation.ValidPhoneNumber;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -25,6 +26,7 @@ public class FlatRequest {
     private String tenantName;
     
     @Size(max = 50)
+    @ValidPhoneNumber(message = "Tenant contact must be a valid phone number")
     private String tenantContact;
     
     @Email

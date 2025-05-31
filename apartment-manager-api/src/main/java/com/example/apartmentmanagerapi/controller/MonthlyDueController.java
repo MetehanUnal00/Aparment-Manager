@@ -4,8 +4,10 @@ import com.example.apartmentmanagerapi.dto.MonthlyDueRequest;
 import com.example.apartmentmanagerapi.dto.MonthlyDueResponse;
 import com.example.apartmentmanagerapi.entity.Flat;
 import com.example.apartmentmanagerapi.entity.MonthlyDue;
+import com.example.apartmentmanagerapi.mapper.MonthlyDueMapper;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
-import com.example.apartmentmanagerapi.service.MonthlyDueService;
+import com.example.apartmentmanagerapi.repository.MonthlyDueRepository;
+import com.example.apartmentmanagerapi.service.IMonthlyDueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,8 +36,10 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "http://localhost:4200")
 public class MonthlyDueController {
     
-    private final MonthlyDueService monthlyDueService;
+    private final IMonthlyDueService monthlyDueService;
     private final FlatRepository flatRepository;
+    private final MonthlyDueRepository monthlyDueRepository;
+    private final MonthlyDueMapper monthlyDueMapper;
     
     /**
      * Generate monthly dues for all flats in a building.
@@ -60,7 +64,7 @@ public class MonthlyDueController {
         );
         
         List<MonthlyDueResponse> responses = createdDues.stream()
-                .map(MonthlyDueResponse::fromEntity)
+                .map(monthlyDueMapper::toResponse)
                 .collect(Collectors.toList());
         
         return ResponseEntity.status(HttpStatus.CREATED).body(responses);
@@ -85,23 +89,14 @@ public class MonthlyDueController {
         Flat flat = flatRepository.findById(request.getFlatId())
                 .orElseThrow(() -> new RuntimeException("Flat not found"));
         
-        // Build monthly due entity
-        MonthlyDue monthlyDue = MonthlyDue.builder()
-                .flat(flat)
-                .dueAmount(request.getDueAmount())
-                .dueDate(request.getDueDate())
-                .dueDescription(request.getDueDescription())
-                .baseRent(request.getBaseRent())
-                .additionalCharges(request.getAdditionalCharges())
-                .additionalChargesDescription(request.getAdditionalChargesDescription())
-                .status(MonthlyDue.DueStatus.UNPAID)
-                .paidAmount(BigDecimal.ZERO)
-                .build();
+        // Convert request to entity using mapper
+        MonthlyDue monthlyDue = monthlyDueMapper.toEntity(request);
+        monthlyDue.setFlat(flat); // Set the flat relationship
         
         MonthlyDue createdDue = monthlyDueService.createMonthlyDue(monthlyDue);
         
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(MonthlyDueResponse.fromEntity(createdDue));
+                .body(monthlyDueMapper.toResponse(createdDue));
     }
     
     /**
@@ -117,7 +112,7 @@ public class MonthlyDueController {
         
         List<MonthlyDue> dues = monthlyDueService.getMonthlyDuesByFlat(flatId);
         List<MonthlyDueResponse> responses = dues.stream()
-                .map(MonthlyDueResponse::fromEntity)
+                .map(monthlyDueMapper::toResponse)
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(responses);
@@ -165,7 +160,7 @@ public class MonthlyDueController {
         
         List<MonthlyDue> overdueDues = monthlyDueService.getOverdueDuesByBuilding(buildingId);
         List<MonthlyDueResponse> responses = overdueDues.stream()
-                .map(MonthlyDueResponse::fromEntity)
+                .map(monthlyDueMapper::toResponse)
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(responses);
@@ -223,16 +218,16 @@ public class MonthlyDueController {
         
         log.info("Updating monthly due ID: {}", dueId);
         
-        // Build monthly due entity with updated fields
-        MonthlyDue monthlyDue = MonthlyDue.builder()
-                .id(dueId)
-                .dueAmount(request.getDueAmount())
-                .dueDescription(request.getDueDescription())
-                .build();
+        // Get existing due first
+        MonthlyDue existingDue = monthlyDueRepository.findById(dueId)
+                .orElseThrow(() -> new RuntimeException("Monthly due not found"));
         
-        MonthlyDue updatedDue = monthlyDueService.updateMonthlyDue(monthlyDue);
+        // Update fields using mapper
+        monthlyDueMapper.updateEntityFromRequest(request, existingDue);
         
-        return ResponseEntity.ok(MonthlyDueResponse.fromEntity(updatedDue));
+        MonthlyDue updatedDue = monthlyDueService.updateMonthlyDue(existingDue);
+        
+        return ResponseEntity.ok(monthlyDueMapper.toResponse(updatedDue));
     }
     
     /**

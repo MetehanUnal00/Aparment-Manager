@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
-public class MonthlyDueService {
+public class MonthlyDueService implements IMonthlyDueService {
     
     private final MonthlyDueRepository monthlyDueRepository;
     private final FlatRepository flatRepository;

@@ -3,7 +3,7 @@ package com.example.apartmentmanagerapi.controller;
 import com.example.apartmentmanagerapi.dto.FlatRequest;
 import com.example.apartmentmanagerapi.dto.FlatResponse;
 import com.example.apartmentmanagerapi.dto.MessageResponse;
-import com.example.apartmentmanagerapi.service.FlatService;
+import com.example.apartmentmanagerapi.service.IFlatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +19,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FlatController {
 
-    private final FlatService flatService;
+    private final IFlatService flatService;
 
     @PostMapping
     @PreAuthorize("hasRole('MANAGER')")

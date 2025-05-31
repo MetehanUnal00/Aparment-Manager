@@ -24,7 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
-public class PaymentService {
+public class PaymentService implements IPaymentService {
     
     private final PaymentRepository paymentRepository;
     private final FlatRepository flatRepository;

@@ -5,9 +5,10 @@ import com.example.apartmentmanagerapi.dto.PaymentResponse;
 import com.example.apartmentmanagerapi.entity.Flat;
 import com.example.apartmentmanagerapi.entity.Payment;
 import com.example.apartmentmanagerapi.entity.User;
+import com.example.apartmentmanagerapi.mapper.PaymentMapper;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
 import com.example.apartmentmanagerapi.repository.UserRepository;
-import com.example.apartmentmanagerapi.service.PaymentService;
+import com.example.apartmentmanagerapi.service.IPaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,9 +40,10 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "http://localhost:4200")
 public class PaymentController {
     
-    private final PaymentService paymentService;
+    private final IPaymentService paymentService;
     private final FlatRepository flatRepository;
     private final UserRepository userRepository;
+    private final PaymentMapper paymentMapper;
     
     /**
      * Create a new payment for a flat.
@@ -68,25 +70,21 @@ public class PaymentController {
         User currentUser = userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
-        // Build payment entity
-        Payment payment = Payment.builder()
-                .flat(flat)
-                .amount(request.getAmount())
-                .paymentDate(request.getPaymentDate() != null ? 
-                        request.getPaymentDate() : LocalDateTime.now())
-                .paymentMethod(request.getPaymentMethod())
-                .referenceNumber(request.getReferenceNumber())
-                .notes(request.getNotes())
-                .description(request.getDescription())
-                .receiptNumber(request.getReceiptNumber())
-                .recordedBy(currentUser)
-                .build();
+        // Build payment entity using mapper
+        Payment payment = paymentMapper.toEntity(request);
+        payment.setFlat(flat);
+        payment.setRecordedBy(currentUser);
+        
+        // Set default payment date if not provided
+        if (payment.getPaymentDate() == null) {
+            payment.setPaymentDate(LocalDateTime.now());
+        }
         
         // Create payment
         Payment createdPayment = paymentService.createPayment(payment);
         
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(PaymentResponse.fromEntity(createdPayment));
+                .body(paymentMapper.toResponse(createdPayment));
     }
     
     /**
@@ -103,7 +101,7 @@ public class PaymentController {
         
         List<Payment> payments = paymentService.getPaymentsByFlat(flatId);
         List<PaymentResponse> responses = payments.stream()
-                .map(PaymentResponse::fromEntity)
+                .map(paymentMapper::toResponse)
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(responses);
@@ -139,7 +137,7 @@ public class PaymentController {
                 buildingId, startDate, endDate);
         
         List<PaymentResponse> responses = payments.stream()
-                .map(PaymentResponse::fromEntity)
+                .map(paymentMapper::toResponse)
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(responses);
@@ -224,7 +222,7 @@ public class PaymentController {
         
         log.info("Updating payment ID: {}", paymentId);
         
-        // Build payment entity with updated fields
+        // Build payment entity with only the fields that can be updated
         Payment payment = Payment.builder()
                 .id(paymentId)
                 .paymentMethod(request.getPaymentMethod())
@@ -234,7 +232,7 @@ public class PaymentController {
         
         Payment updatedPayment = paymentService.updatePayment(payment);
         
-        return ResponseEntity.ok(PaymentResponse.fromEntity(updatedPayment));
+        return ResponseEntity.ok(paymentMapper.toResponse(updatedPayment));
     }
     
     /**

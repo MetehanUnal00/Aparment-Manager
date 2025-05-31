@@ -4,18 +4,21 @@ import com.example.apartmentmanagerapi.entity.ApartmentBuilding;
 import com.example.apartmentmanagerapi.dto.ApartmentBuildingRequest;
 import com.example.apartmentmanagerapi.dto.ApartmentBuildingResponse;
 import com.example.apartmentmanagerapi.repository.ApartmentBuildingRepository;
+import com.example.apartmentmanagerapi.mapper.ApartmentBuildingMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class ApartmentBuildingService {
+@RequiredArgsConstructor
+public class ApartmentBuildingService implements IApartmentBuildingService {
 
-    @Autowired
-    private ApartmentBuildingRepository apartmentBuildingRepository;
+    private final ApartmentBuildingRepository apartmentBuildingRepository;
+    private final ApartmentBuildingMapper apartmentBuildingMapper;
 
     @Transactional
     public ApartmentBuildingResponse createApartmentBuilding(ApartmentBuildingRequest request) {
@@ -24,16 +27,16 @@ public class ApartmentBuildingService {
             throw new RuntimeException("Error: Apartment building name is already taken!");
         }
 
-        ApartmentBuilding building = new ApartmentBuilding(request.getName(), request.getAddress());
+        ApartmentBuilding building = apartmentBuildingMapper.toEntity(request);
         ApartmentBuilding savedBuilding = apartmentBuildingRepository.save(building);
 
-        return mapToResponse(savedBuilding);
+        return apartmentBuildingMapper.toResponse(savedBuilding);
     }
 
     @Transactional(readOnly = true)
     public List<ApartmentBuildingResponse> getAllApartmentBuildings() {
         return apartmentBuildingRepository.findAll().stream()
-                .map(this::mapToResponse)
+                .map(apartmentBuildingMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -41,7 +44,7 @@ public class ApartmentBuildingService {
     public ApartmentBuildingResponse getApartmentBuildingById(Long id) {
         ApartmentBuilding building = apartmentBuildingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Error: Apartment building not found with id: " + id)); // Consider ResourceNotFoundException
-        return mapToResponse(building);
+        return apartmentBuildingMapper.toResponse(building);
     }
 
     @Transactional
@@ -54,10 +57,10 @@ public class ApartmentBuildingService {
             throw new RuntimeException("Error: New apartment building name is already taken!");
         }
 
-        building.setName(request.getName());
-        building.setAddress(request.getAddress());
+        // Update the entity using mapper
+        apartmentBuildingMapper.updateEntityFromRequest(request, building);
         ApartmentBuilding updatedBuilding = apartmentBuildingRepository.save(building);
-        return mapToResponse(updatedBuilding);
+        return apartmentBuildingMapper.toResponse(updatedBuilding);
     }
 
     @Transactional
@@ -68,15 +71,5 @@ public class ApartmentBuildingService {
         // Consider implications: what happens to flats in this building?
         // For now, simple delete. Later, might need to check if flats exist.
         apartmentBuildingRepository.deleteById(id);
-    }
-
-    private ApartmentBuildingResponse mapToResponse(ApartmentBuilding building) {
-        return new ApartmentBuildingResponse(
-                building.getId(),
-                building.getName(),
-                building.getAddress(),
-                building.getCreatedAt(),
-                building.getUpdatedAt()
-        );
     }
 }

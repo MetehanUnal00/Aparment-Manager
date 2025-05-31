@@ -4,6 +4,7 @@ import com.example.apartmentmanagerapi.entity.ApartmentBuilding;
 import com.example.apartmentmanagerapi.entity.Flat;
 import com.example.apartmentmanagerapi.dto.FlatRequest;
 import com.example.apartmentmanagerapi.dto.FlatResponse;
+import com.example.apartmentmanagerapi.mapper.FlatMapper;
 import com.example.apartmentmanagerapi.repository.ApartmentBuildingRepository;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,64 +22,66 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class FlatService {
+public class FlatService implements IFlatService {
 
     private final FlatRepository flatRepository;
     private final ApartmentBuildingRepository apartmentBuildingRepository;
     private final PaymentService paymentService;
     private final MonthlyDueService monthlyDueService;
+    private final FlatMapper flatMapper;
 
     @Transactional
     public FlatResponse createFlat(FlatRequest request) {
+        // Find the apartment building that this flat will belong to
         ApartmentBuilding building = apartmentBuildingRepository.findById(request.getApartmentBuildingId())
                 .orElseThrow(() -> new RuntimeException("Error: Apartment building not found with id: " + request.getApartmentBuildingId()));
 
+        // Check if flat number already exists in this building
         if (flatRepository.findByApartmentBuildingIdAndFlatNumber(request.getApartmentBuildingId(), request.getFlatNumber()).isPresent()) {
             throw new RuntimeException("Error: Flat number " + request.getFlatNumber() + " already exists in this building.");
         }
 
-        Flat flat = new Flat(
-                request.getFlatNumber(),
-                request.getNumberOfRooms(),
-                request.getAreaSqMeters(),
-                building
-        );
+        // Map the request to entity using MapStruct
+        Flat flat = flatMapper.toEntity(request);
         
-        // Set tenant information if provided
-        flat.setTenantName(request.getTenantName());
-        flat.setTenantContact(request.getTenantContact());
-        flat.setTenantEmail(request.getTenantEmail());
-        flat.setMonthlyRent(request.getMonthlyRent());
-        flat.setSecurityDeposit(request.getSecurityDeposit());
-        flat.setTenantMoveInDate(request.getTenantMoveInDate());
-        flat.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
+        // Set the apartment building relationship (not handled by mapper)
+        flat.setApartmentBuilding(building);
         
+        // Save the flat entity
         Flat savedFlat = flatRepository.save(flat);
-        return mapToResponse(savedFlat);
+        
+        // Map entity to response and return
+        return flatMapper.toResponse(savedFlat);
     }
 
     @Transactional(readOnly = true)
     public List<FlatResponse> getAllFlatsByBuildingId(Long buildingId) {
+        // Verify apartment building exists
         if (!apartmentBuildingRepository.existsById(buildingId)) {
             throw new RuntimeException("Error: Apartment building not found with id: " + buildingId);
         }
+        
+        // Find all flats and map to response DTOs
         return flatRepository.findByApartmentBuildingId(buildingId).stream()
-                .map(this::mapToResponse)
+                .map(flatMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public FlatResponse getFlatById(Long buildingId, Long flatId) {
+        // Find flat and map to response
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
                 .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
-        return mapToResponse(flat);
+        return flatMapper.toResponse(flat);
     }
 
     @Transactional
     public FlatResponse updateFlat(Long buildingId, Long flatId, FlatRequest request) {
+        // Verify apartment building exists
         ApartmentBuilding building = apartmentBuildingRepository.findById(buildingId)
                 .orElseThrow(() -> new RuntimeException("Error: Apartment building not found with id: " + buildingId));
 
+        // Find the flat to update
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
                 .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
 
@@ -88,30 +91,22 @@ public class FlatService {
             throw new RuntimeException("Error: New flat number " + request.getFlatNumber() + " already exists in this building.");
         }
 
-        flat.setFlatNumber(request.getFlatNumber());
-        flat.setNumberOfRooms(request.getNumberOfRooms());
-        flat.setAreaSqMeters(request.getAreaSqMeters());
+        // Update the flat entity from request using MapStruct
+        flatMapper.updateEntityFromRequest(request, flat);
         
-        // Update tenant information
-        flat.setTenantName(request.getTenantName());
-        flat.setTenantContact(request.getTenantContact());
-        flat.setTenantEmail(request.getTenantEmail());
-        flat.setMonthlyRent(request.getMonthlyRent());
-        flat.setSecurityDeposit(request.getSecurityDeposit());
-        flat.setTenantMoveInDate(request.getTenantMoveInDate());
-        flat.setIsActive(request.getIsActive() != null ? request.getIsActive() : flat.getIsActive());
+        // Handle special case: if building is being changed (complex operation)
         // Note: Changing apartmentBuildingId for an existing flat might be complex or disallowed.
         // For now, we assume the flat stays within the same building or this request.getApartmentBuildingId() matches the current buildingId.
         // If you need to move a flat to a different building, that's a more complex operation.
         if (!buildingId.equals(request.getApartmentBuildingId())) {
-             ApartmentBuilding newBuilding = apartmentBuildingRepository.findById(request.getApartmentBuildingId())
+            ApartmentBuilding newBuilding = apartmentBuildingRepository.findById(request.getApartmentBuildingId())
                 .orElseThrow(() -> new RuntimeException("Error: New Apartment building not found with id: " + request.getApartmentBuildingId()));
             flat.setApartmentBuilding(newBuilding);
         }
 
-
+        // Save and return the updated flat
         Flat updatedFlat = flatRepository.save(flat);
-        return mapToResponse(updatedFlat);
+        return flatMapper.toResponse(updatedFlat);
     }
 
     @Transactional
@@ -139,11 +134,13 @@ public class FlatService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> getFlatWithFinancialInfo(Long buildingId, Long flatId) {
+        // Find the flat
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
                 .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
         
+        // Build comprehensive financial information map
         Map<String, Object> flatInfo = new HashMap<>();
-        flatInfo.put("flat", mapToResponse(flat));
+        flatInfo.put("flat", flatMapper.toResponse(flat));
         flatInfo.put("currentBalance", paymentService.calculateOutstandingBalance(flatId));
         flatInfo.put("totalDebt", monthlyDueService.calculateTotalDebt(flatId));
         flatInfo.put("recentPayments", paymentService.getPaymentsByFlat(flatId).stream()
@@ -162,11 +159,14 @@ public class FlatService {
      */
     @Transactional(readOnly = true)
     public List<FlatResponse> getActiveFlatsByBuildingId(Long buildingId) {
+        // Verify apartment building exists
         if (!apartmentBuildingRepository.existsById(buildingId)) {
             throw new RuntimeException("Error: Apartment building not found with id: " + buildingId);
         }
+        
+        // Find active flats and map to response DTOs
         return flatRepository.findByApartmentBuildingIdAndIsActiveTrue(buildingId).stream()
-                .map(this::mapToResponse)
+                .map(flatMapper::toResponse)
                 .collect(Collectors.toList());
     }
     
@@ -176,6 +176,7 @@ public class FlatService {
      */
     @Transactional
     public FlatResponse updateTenantInfo(Long buildingId, Long flatId, FlatRequest request) {
+        // Find the flat to update
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
                 .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
         
@@ -189,8 +190,9 @@ public class FlatService {
         
         log.info("Updated tenant information for flat {}: {}", flatId, request.getTenantName());
         
+        // Save and return updated flat
         Flat updatedFlat = flatRepository.save(flat);
-        return mapToResponse(updatedFlat);
+        return flatMapper.toResponse(updatedFlat);
     }
     
     /**
@@ -199,39 +201,16 @@ public class FlatService {
      */
     @Transactional
     public FlatResponse deactivateFlat(Long buildingId, Long flatId) {
+        // Find the flat to deactivate
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
                 .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
         
+        // Mark as inactive
         flat.setIsActive(false);
         log.info("Deactivated flat {}", flatId);
         
+        // Save and return updated flat
         Flat updatedFlat = flatRepository.save(flat);
-        return mapToResponse(updatedFlat);
-    }
-
-
-    private FlatResponse mapToResponse(Flat flat) {
-        FlatResponse response = new FlatResponse(
-                flat.getId(),
-                flat.getFlatNumber(),
-                flat.getNumberOfRooms(),
-                flat.getAreaSqMeters(),
-                flat.getApartmentBuilding().getId(),
-                flat.getApartmentBuilding().getName(),
-                flat.getCreatedAt(),
-                flat.getUpdatedAt()
-        );
-        
-        // Set tenant information
-        response.setTenantName(flat.getTenantName());
-        response.setTenantContact(flat.getTenantContact());
-        response.setTenantEmail(flat.getTenantEmail());
-        response.setMonthlyRent(flat.getMonthlyRent());
-        response.setSecurityDeposit(flat.getSecurityDeposit());
-        response.setTenantMoveInDate(flat.getTenantMoveInDate());
-        response.setIsActive(flat.getIsActive());
-        response.setCurrentBalance(flat.getCurrentBalance());
-        
-        return response;
+        return flatMapper.toResponse(updatedFlat);
     }
 }

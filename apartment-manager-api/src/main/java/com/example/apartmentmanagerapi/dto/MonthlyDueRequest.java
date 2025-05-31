@@ -1,8 +1,11 @@
 package com.example.apartmentmanagerapi.dto;
 
+import com.example.apartmentmanagerapi.dto.validation.AtLeastOneNotNull;
+import com.example.apartmentmanagerapi.validation.FutureOrToday;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,11 +18,13 @@ import java.time.LocalDate;
 /**
  * DTO for creating monthly dues.
  * Used for both individual and bulk due generation.
+ * Either flatId or buildingId must be provided.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@AtLeastOneNotNull(fields = {"flatId", "buildingId"}, message = "Either flatId or buildingId must be provided")
 public class MonthlyDueRequest {
     
     /**
@@ -43,6 +48,7 @@ public class MonthlyDueRequest {
      * Due date for payment
      */
     @NotNull(message = "Due date is required")
+    @FutureOrToday(message = "Due date must be today or in the future")
     private LocalDate dueDate;
     
     /**
@@ -54,11 +60,13 @@ public class MonthlyDueRequest {
     /**
      * Base rent amount (optional)
      */
+    @PositiveOrZero(message = "Base rent must be zero or positive")
     private BigDecimal baseRent;
     
     /**
      * Additional charges amount (optional)
      */
+    @PositiveOrZero(message = "Additional charges must be zero or positive")
     private BigDecimal additionalCharges;
     
     /**

@@ -3,7 +3,7 @@ package com.example.apartmentmanagerapi.controller;
 import com.example.apartmentmanagerapi.dto.ApartmentBuildingRequest;
 import com.example.apartmentmanagerapi.dto.ApartmentBuildingResponse;
 import com.example.apartmentmanagerapi.dto.MessageResponse;
-import com.example.apartmentmanagerapi.service.ApartmentBuildingService;
+import com.example.apartmentmanagerapi.service.IApartmentBuildingService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,7 @@ import java.util.List;
 public class ApartmentBuildingController {
 
     @Autowired
-    private ApartmentBuildingService apartmentBuildingService;
+    private IApartmentBuildingService apartmentBuildingService;
 
     @PostMapping
     @PreAuthorize("hasRole('MANAGER')")
