@@ -5,6 +5,8 @@ import com.example.apartmentmanagerapi.entity.Flat;
 import com.example.apartmentmanagerapi.dto.FlatRequest;
 import com.example.apartmentmanagerapi.dto.FlatResponse;
 import com.example.apartmentmanagerapi.event.FlatCreatedEvent;
+import com.example.apartmentmanagerapi.exception.ResourceNotFoundException;
+import com.example.apartmentmanagerapi.exception.DuplicateResourceException;
 import com.example.apartmentmanagerapi.mapper.FlatMapper;
 import com.example.apartmentmanagerapi.repository.ApartmentBuildingRepository;
 import com.example.apartmentmanagerapi.repository.FlatRepository;
@@ -38,11 +40,11 @@ public class FlatService implements IFlatService {
     public FlatResponse createFlat(FlatRequest request) {
         // Find the apartment building that this flat will belong to
         ApartmentBuilding building = apartmentBuildingRepository.findById(request.getApartmentBuildingId())
-                .orElseThrow(() -> new RuntimeException("Error: Apartment building not found with id: " + request.getApartmentBuildingId()));
+                .orElseThrow(() -> new ResourceNotFoundException("ApartmentBuilding", request.getApartmentBuildingId()));
 
         // Check if flat number already exists in this building
         if (flatRepository.findByApartmentBuildingIdAndFlatNumber(request.getApartmentBuildingId(), request.getFlatNumber()).isPresent()) {
-            throw new RuntimeException("Error: Flat number " + request.getFlatNumber() + " already exists in this building.");
+            throw new DuplicateResourceException("Flat", "flatNumber", request.getFlatNumber());
         }
 
         // Map the request to entity using MapStruct
@@ -74,7 +76,7 @@ public class FlatService implements IFlatService {
     public List<FlatResponse> getAllFlatsByBuildingId(Long buildingId) {
         // Verify apartment building exists
         if (!apartmentBuildingRepository.existsById(buildingId)) {
-            throw new RuntimeException("Error: Apartment building not found with id: " + buildingId);
+            throw new ResourceNotFoundException("ApartmentBuilding", buildingId);
         }
         
         // Find all flats and map to response DTOs
@@ -87,7 +89,7 @@ public class FlatService implements IFlatService {
     public FlatResponse getFlatById(Long buildingId, Long flatId) {
         // Find flat and map to response
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
-                .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Flat", flatId, "ApartmentBuilding", buildingId));
         return flatMapper.toResponse(flat);
     }
 
@@ -95,16 +97,16 @@ public class FlatService implements IFlatService {
     public FlatResponse updateFlat(Long buildingId, Long flatId, FlatRequest request) {
         // Verify apartment building exists
         ApartmentBuilding building = apartmentBuildingRepository.findById(buildingId)
-                .orElseThrow(() -> new RuntimeException("Error: Apartment building not found with id: " + buildingId));
+                .orElseThrow(() -> new ResourceNotFoundException("ApartmentBuilding", buildingId));
 
         // Find the flat to update
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
-                .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Flat", flatId, "ApartmentBuilding", buildingId));
 
         // Check if flat number is being changed and if the new number is already taken in the same building
         if (!flat.getFlatNumber().equals(request.getFlatNumber()) &&
             flatRepository.findByApartmentBuildingIdAndFlatNumber(buildingId, request.getFlatNumber()).isPresent()) {
-            throw new RuntimeException("Error: New flat number " + request.getFlatNumber() + " already exists in this building.");
+            throw new DuplicateResourceException("Flat", "flatNumber", request.getFlatNumber());
         }
 
         // Update the flat entity from request using MapStruct
@@ -116,7 +118,7 @@ public class FlatService implements IFlatService {
         // If you need to move a flat to a different building, that's a more complex operation.
         if (!buildingId.equals(request.getApartmentBuildingId())) {
             ApartmentBuilding newBuilding = apartmentBuildingRepository.findById(request.getApartmentBuildingId())
-                .orElseThrow(() -> new RuntimeException("Error: New Apartment building not found with id: " + request.getApartmentBuildingId()));
+                .orElseThrow(() -> new ResourceNotFoundException("ApartmentBuilding", request.getApartmentBuildingId()));
             flat.setApartmentBuilding(newBuilding);
         }
 
@@ -128,10 +130,10 @@ public class FlatService implements IFlatService {
     @Transactional
     public void deleteFlat(Long buildingId, Long flatId) {
         if (!flatRepository.existsById(flatId)) {
-             throw new RuntimeException("Error: Flat not found with id: " + flatId);
+             throw new ResourceNotFoundException("Flat", flatId);
         }
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
-                .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Flat", flatId, "ApartmentBuilding", buildingId));
         
         // Check for outstanding balance before deletion
         BigDecimal balance = paymentService.calculateOutstandingBalance(flatId);
@@ -153,7 +155,7 @@ public class FlatService implements IFlatService {
     public Map<String, Object> getFlatWithFinancialInfo(Long buildingId, Long flatId) {
         // Find the flat
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
-                .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Flat", flatId, "ApartmentBuilding", buildingId));
         
         // Build comprehensive financial information map
         Map<String, Object> flatInfo = new HashMap<>();
@@ -178,7 +180,7 @@ public class FlatService implements IFlatService {
     public List<FlatResponse> getActiveFlatsByBuildingId(Long buildingId) {
         // Verify apartment building exists
         if (!apartmentBuildingRepository.existsById(buildingId)) {
-            throw new RuntimeException("Error: Apartment building not found with id: " + buildingId);
+            throw new ResourceNotFoundException("ApartmentBuilding", buildingId);
         }
         
         // Find active flats and map to response DTOs
@@ -195,7 +197,7 @@ public class FlatService implements IFlatService {
     public FlatResponse updateTenantInfo(Long buildingId, Long flatId, FlatRequest request) {
         // Find the flat to update
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
-                .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Flat", flatId, "ApartmentBuilding", buildingId));
         
         // Update only tenant-related fields
         flat.setTenantName(request.getTenantName());
@@ -220,7 +222,7 @@ public class FlatService implements IFlatService {
     public FlatResponse deactivateFlat(Long buildingId, Long flatId) {
         // Find the flat to deactivate
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
-                .orElseThrow(() -> new RuntimeException("Error: Flat not found with id: " + flatId + " in building: " + buildingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Flat", flatId, "ApartmentBuilding", buildingId));
         
         // Mark as inactive
         flat.setIsActive(false);

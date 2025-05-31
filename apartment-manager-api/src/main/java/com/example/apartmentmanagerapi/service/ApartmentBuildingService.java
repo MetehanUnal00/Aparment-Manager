@@ -5,6 +5,8 @@ import com.example.apartmentmanagerapi.dto.ApartmentBuildingRequest;
 import com.example.apartmentmanagerapi.dto.ApartmentBuildingResponse;
 import com.example.apartmentmanagerapi.repository.ApartmentBuildingRepository;
 import com.example.apartmentmanagerapi.mapper.ApartmentBuildingMapper;
+import com.example.apartmentmanagerapi.exception.ResourceNotFoundException;
+import com.example.apartmentmanagerapi.exception.DuplicateResourceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +25,7 @@ public class ApartmentBuildingService implements IApartmentBuildingService {
     @Transactional
     public ApartmentBuildingResponse createApartmentBuilding(ApartmentBuildingRequest request) {
         if (apartmentBuildingRepository.findByName(request.getName()).isPresent()) {
-            // Consider a custom exception here
-            throw new RuntimeException("Error: Apartment building name is already taken!");
+            throw new DuplicateResourceException("ApartmentBuilding", "name", request.getName());
         }
 
         ApartmentBuilding building = apartmentBuildingMapper.toEntity(request);
@@ -43,18 +44,18 @@ public class ApartmentBuildingService implements IApartmentBuildingService {
     @Transactional(readOnly = true)
     public ApartmentBuildingResponse getApartmentBuildingById(Long id) {
         ApartmentBuilding building = apartmentBuildingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Error: Apartment building not found with id: " + id)); // Consider ResourceNotFoundException
+                .orElseThrow(() -> new ResourceNotFoundException("ApartmentBuilding", id));
         return apartmentBuildingMapper.toResponse(building);
     }
 
     @Transactional
     public ApartmentBuildingResponse updateApartmentBuilding(Long id, ApartmentBuildingRequest request) {
         ApartmentBuilding building = apartmentBuildingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Error: Apartment building not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("ApartmentBuilding", id));
 
         // Check if name is being changed and if the new name is already taken by another building
         if (!building.getName().equals(request.getName()) && apartmentBuildingRepository.findByName(request.getName()).isPresent()) {
-            throw new RuntimeException("Error: New apartment building name is already taken!");
+            throw new DuplicateResourceException("ApartmentBuilding", "name", request.getName());
         }
 
         // Update the entity using mapper
@@ -66,7 +67,7 @@ public class ApartmentBuildingService implements IApartmentBuildingService {
     @Transactional
     public void deleteApartmentBuilding(Long id) {
         if (!apartmentBuildingRepository.existsById(id)) {
-            throw new RuntimeException("Error: Apartment building not found with id: " + id);
+            throw new ResourceNotFoundException("ApartmentBuilding", id);
         }
         // Consider implications: what happens to flats in this building?
         // For now, simple delete. Later, might need to check if flats exist.
