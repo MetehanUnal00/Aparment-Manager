@@ -14,6 +14,8 @@ import { ExpenseFormComponent } from './components/expense-form/expense-form.com
 import { MonthlyDueListComponent } from './components/monthly-due-list/monthly-due-list.component';
 import { MonthlyDueFormComponent } from './components/monthly-due-form/monthly-due-form.component';
 import { ContractListComponent } from './components/contract-list/contract-list.component';
+import { ContractFormComponent } from './components/contract-form/contract-form.component';
+import { ContractDetailsComponent } from './components/contract-details/contract-details.component';
 
 const routes: Routes = [
   {
@@ -39,8 +41,8 @@ const routes: Routes = [
       { path: 'monthly-dues/new', component: MonthlyDueFormComponent },
       { path: 'monthly-dues/:id/edit', component: MonthlyDueFormComponent },
       { path: 'contracts', component: ContractListComponent },
-      { path: 'contracts/new', component: ContractListComponent }, // Placeholder until ContractFormComponent is ready
-      { path: 'contracts/:id', component: ContractListComponent }, // Placeholder until ContractDetailsComponent is ready
+      { path: 'contracts/new', component: ContractFormComponent },
+      { path: 'contracts/:id', component: ContractDetailsComponent },
       { path: 'contracts/:id/renew', component: ContractListComponent }, // Placeholder until ContractRenewalFormComponent is ready
       { path: 'contracts/:id/modify', component: ContractListComponent }, // Placeholder until ContractModificationFormComponent is ready
       { path: 'contracts/:id/cancel', component: ContractListComponent } // Placeholder until ContractCancellationDialogComponent is ready

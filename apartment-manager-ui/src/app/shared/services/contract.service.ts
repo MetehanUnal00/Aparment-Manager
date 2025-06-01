@@ -336,6 +336,23 @@ export class ContractService {
     this.contractDetailCache.clear();
     console.log('Contract cache cleared');
   }
+  
+  /**
+   * Check if dates overlap with existing contracts for a flat
+   */
+  checkOverlap(flatId: number, startDate: string, endDate: string, excludeId?: number): Observable<boolean> {
+    // Create HttpParams for the request
+    let params = new HttpParams()
+      .set('flatId', flatId.toString())
+      .set('startDate', startDate)
+      .set('endDate', endDate);
+    
+    if (excludeId) {
+      params = params.set('excludeId', excludeId.toString());
+    }
+    
+    return this.api.get<boolean>(`${this.baseUrl}/check-overlap`, params);
+  }
 
   /**
    * Invalidate cache after mutations

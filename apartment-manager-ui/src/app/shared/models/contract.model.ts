@@ -144,6 +144,9 @@ export interface ContractResponse {
   cancellationReason?: string;
   cancellationCategory?: CancellationReasonCategory;
   lastStatusChangeDate?: string;
+  statusChangedAt?: string;
+  statusChangedBy?: string;
+  statusChangeReason?: string;
   
   // Calculated fields from backend
   statusDisplayName?: string;
@@ -163,6 +166,8 @@ export interface ContractResponse {
   outstandingBalance?: number;
   totalDuesGenerated?: number;
   hasRenewal?: boolean;
+  canRenew?: boolean;
+  canModify?: boolean;
 }
 
 /**

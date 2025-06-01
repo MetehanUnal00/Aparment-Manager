@@ -1,1 +1,424 @@
-<p>contract-form works!</p>
+<div class="container-fluid py-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Page Header -->
+      <div class="page-header mb-4">
+        <h1 class="h3 mb-0">Create New Contract</h1>
+        <p class="text-muted">Fill in the details below to create a new rental contract</p>
+      </div>
+
+      <!-- Loading State -->
+      <app-loading-spinner *ngIf="loadingService.isLoading$ | async" 
+                          [fullscreen]="false">
+      </app-loading-spinner>
+
+      <!-- Form Errors -->
+      <app-form-errors *ngIf="formErrors.length > 0" 
+                       [errors]="formErrors" 
+                       class="mb-4">
+      </app-form-errors>
+
+      <!-- Contract Form -->
+      <form [formGroup]="contractForm" (ngSubmit)="onSubmit()" class="contract-form">
+        <div class="row">
+          <div class="col-lg-8">
+            <!-- Flat Selection Section -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0">
+                  <i class="bi bi-building me-2"></i>
+                  Flat Selection
+                </h5>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <!-- Building Selection -->
+                  <div class="col-md-6 mb-3">
+                    <label for="buildingId" class="form-label required">Building</label>
+                    <select 
+                      id="buildingId" 
+                      class="form-select" 
+                      formControlName="buildingId"
+                      [class.is-invalid]="f['buildingId'].invalid && f['buildingId'].touched">
+                      <option value="">Select a building</option>
+                      <option *ngFor="let building of buildings" [value]="building.id">
+                        {{ building.name }}
+                      </option>
+                    </select>
+                    <div class="invalid-feedback" *ngIf="f['buildingId'].invalid && f['buildingId'].touched">
+                      Please select a building
+                    </div>
+                  </div>
+
+                  <!-- Flat Selection -->
+                  <div class="col-md-6 mb-3">
+                    <label for="flatId" class="form-label required">Flat</label>
+                    <div class="position-relative">
+                      <select 
+                        id="flatId" 
+                        class="form-select" 
+                        formControlName="flatId"
+                        [disabled]="!f['buildingId'].value || isLoadingFlats"
+                        [class.is-invalid]="f['flatId'].invalid && f['flatId'].touched">
+                        <option value="">
+                          {{ isLoadingFlats ? 'Loading flats...' : 'Select a flat' }}
+                        </option>
+                        <option *ngFor="let flat of availableFlats" [value]="flat.id">
+                          {{ flat.flatNumber }} 
+                          <span *ngIf="flat.tenantName">({{ flat.tenantName }})</span>
+                        </option>
+                      </select>
+                      <div class="spinner-border spinner-border-sm position-absolute top-50 end-0 translate-middle-y me-3" 
+                           *ngIf="isLoadingFlats">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                    </div>
+                    <div class="invalid-feedback" *ngIf="f['flatId'].invalid && f['flatId'].touched">
+                      Please select a flat
+                    </div>
+                    <div class="form-text" *ngIf="availableFlats.length === 0 && f['buildingId'].value && !isLoadingFlats">
+                      No available flats in this building
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contract Period Section -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0">
+                  <i class="bi bi-calendar-range me-2"></i>
+                  Contract Period
+                </h5>
+              </div>
+              <div class="card-body">
+                <div formGroupName="dateRange" class="row">
+                  <!-- Start Date -->
+                  <div class="col-md-6 mb-3">
+                    <label for="startDate" class="form-label required">Start Date</label>
+                    <input 
+                      type="date" 
+                      id="startDate" 
+                      class="form-control" 
+                      formControlName="startDate"
+                      [min]="today"
+                      [class.is-invalid]="(dateRangeGroup.get('startDate')?.invalid && dateRangeGroup.get('startDate')?.touched) || overlapError">
+                    <div class="invalid-feedback" *ngIf="dateRangeGroup.get('startDate')?.invalid && dateRangeGroup.get('startDate')?.touched">
+                      Start date is required
+                    </div>
+                  </div>
+
+                  <!-- End Date -->
+                  <div class="col-md-6 mb-3">
+                    <label for="endDate" class="form-label required">End Date</label>
+                    <input 
+                      type="date" 
+                      id="endDate" 
+                      class="form-control" 
+                      formControlName="endDate"
+                      [min]="dateRangeGroup.get('startDate')?.value || today"
+                      [class.is-invalid]="(dateRangeGroup.get('endDate')?.invalid && dateRangeGroup.get('endDate')?.touched) || overlapError">
+                    <div class="invalid-feedback" *ngIf="dateRangeGroup.get('endDate')?.invalid && dateRangeGroup.get('endDate')?.touched">
+                      End date is required
+                    </div>
+                  </div>
+
+                  <!-- Date Range Errors -->
+                  <div class="col-12" *ngIf="dateRangeGroup.errors && (dateRangeGroup.touched || dateRangeGroup.dirty)">
+                    <div class="alert alert-danger" role="alert">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      End date must be after start date
+                    </div>
+                  </div>
+
+                  <!-- Overlap Error -->
+                  <div class="col-12" *ngIf="overlapError">
+                    <div class="alert alert-danger" role="alert">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      Selected dates overlap with an existing contract for this flat
+                    </div>
+                  </div>
+
+                  <!-- Overlap Checking -->
+                  <div class="col-12" *ngIf="isCheckingOverlap">
+                    <div class="alert alert-info" role="alert">
+                      <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Checking...</span>
+                      </div>
+                      Checking for contract overlaps...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Financial Details Section -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0">
+                  <i class="bi bi-currency-dollar me-2"></i>
+                  Financial Details
+                </h5>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <!-- Monthly Rent -->
+                  <div class="col-md-4 mb-3">
+                    <label for="monthlyRent" class="form-label required">Monthly Rent</label>
+                    <div class="input-group">
+                      <span class="input-group-text">$</span>
+                      <input 
+                        type="number" 
+                        id="monthlyRent" 
+                        class="form-control" 
+                        formControlName="monthlyRent"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="0.00"
+                        [class.is-invalid]="f['monthlyRent'].invalid && f['monthlyRent'].touched">
+                      <div class="invalid-feedback">
+                        Monthly rent must be greater than 0
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Security Deposit -->
+                  <div class="col-md-4 mb-3">
+                    <label for="securityDeposit" class="form-label">Security Deposit</label>
+                    <div class="input-group">
+                      <span class="input-group-text">$</span>
+                      <input 
+                        type="number" 
+                        id="securityDeposit" 
+                        class="form-control" 
+                        formControlName="securityDeposit"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        [class.is-invalid]="f['securityDeposit'].invalid && f['securityDeposit'].touched">
+                      <div class="invalid-feedback">
+                        Security deposit cannot be negative
+                      </div>
+                    </div>
+                    <div class="form-text">Auto-calculated as one month's rent</div>
+                  </div>
+
+                  <!-- Payment Day -->
+                  <div class="col-md-4 mb-3">
+                    <label for="dayOfMonth" class="form-label required">Payment Day</label>
+                    <input 
+                      type="number" 
+                      id="dayOfMonth" 
+                      class="form-control" 
+                      formControlName="dayOfMonth"
+                      min="1"
+                      max="31"
+                      [class.is-invalid]="f['dayOfMonth'].invalid && f['dayOfMonth'].touched">
+                    <div class="invalid-feedback">
+                      Payment day must be between 1 and 31
+                    </div>
+                    <div class="form-text">Day of month when rent is due</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tenant Information Section -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0">
+                  <i class="bi bi-person me-2"></i>
+                  Tenant Information
+                </h5>
+              </div>
+              <div class="card-body">
+                <div formGroupName="tenantInfo" class="row">
+                  <!-- Tenant Name -->
+                  <div class="col-md-4 mb-3">
+                    <label for="tenantName" class="form-label required">Tenant Name</label>
+                    <input 
+                      type="text" 
+                      id="tenantName" 
+                      class="form-control" 
+                      formControlName="name"
+                      maxlength="100"
+                      placeholder="John Doe"
+                      [class.is-invalid]="tenantInfoGroup.get('name')?.invalid && tenantInfoGroup.get('name')?.touched">
+                    <div class="invalid-feedback">
+                      Tenant name is required
+                    </div>
+                  </div>
+
+                  <!-- Tenant Contact -->
+                  <div class="col-md-4 mb-3">
+                    <label for="tenantContact" class="form-label">Contact Number</label>
+                    <input 
+                      type="tel" 
+                      id="tenantContact" 
+                      class="form-control" 
+                      formControlName="contact"
+                      placeholder="(555) 123-4567"
+                      [class.is-invalid]="tenantInfoGroup.get('contact')?.invalid && tenantInfoGroup.get('contact')?.touched">
+                    <div class="invalid-feedback">
+                      Invalid phone number format
+                    </div>
+                  </div>
+
+                  <!-- Tenant Email -->
+                  <div class="col-md-4 mb-3">
+                    <label for="tenantEmail" class="form-label">Email Address</label>
+                    <input 
+                      type="email" 
+                      id="tenantEmail" 
+                      class="form-control" 
+                      formControlName="email"
+                      maxlength="100"
+                      placeholder="john@example.com"
+                      [class.is-invalid]="tenantInfoGroup.get('email')?.invalid && tenantInfoGroup.get('email')?.touched">
+                    <div class="invalid-feedback">
+                      Invalid email format
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Additional Options Section -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0">
+                  <i class="bi bi-gear me-2"></i>
+                  Additional Options
+                </h5>
+              </div>
+              <div class="card-body">
+                <!-- Notes -->
+                <div class="mb-3">
+                  <label for="notes" class="form-label">Notes</label>
+                  <textarea 
+                    id="notes" 
+                    class="form-control" 
+                    formControlName="notes"
+                    rows="3"
+                    maxlength="1000"
+                    placeholder="Any additional notes about the contract..."
+                    [class.is-invalid]="f['notes'].invalid && f['notes'].touched">
+                  </textarea>
+                  <div class="form-text">
+                    {{ f['notes'].value?.length || 0 }}/1000 characters
+                  </div>
+                </div>
+
+                <!-- Generate Dues Immediately -->
+                <div class="form-check">
+                  <input 
+                    type="checkbox" 
+                    id="generateDues" 
+                    class="form-check-input" 
+                    formControlName="generateDuesImmediately">
+                  <label for="generateDues" class="form-check-label">
+                    Generate monthly dues immediately after contract creation
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sidebar -->
+          <div class="col-lg-4">
+            <!-- Due Preview -->
+            <div class="card mb-4 sticky-top" style="top: 1rem;" *ngIf="showDuePreview">
+              <div class="card-header">
+                <h5 class="mb-0">
+                  <i class="bi bi-calculator me-2"></i>
+                  Monthly Dues Preview
+                </h5>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Month</th>
+                        <th class="text-end">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let due of duePreview">
+                        <td>{{ due.month }}</td>
+                        <td class="text-end">${{ due.amount | number:'1.2-2' }}</td>
+                      </tr>
+                    </tbody>
+                    <tfoot class="border-top">
+                      <tr>
+                        <th>Total</th>
+                        <th class="text-end">${{ totalDueAmount | number:'1.2-2' }}</th>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <div class="alert alert-info mt-3 mb-0">
+                  <i class="bi bi-info-circle me-2"></i>
+                  <small>{{ duePreview.length }} monthly payment(s) will be generated</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contract Summary (when form is valid) -->
+            <div class="card mb-4" *ngIf="contractForm.valid && !overlapError">
+              <div class="card-header">
+                <h5 class="mb-0">
+                  <i class="bi bi-file-text me-2"></i>
+                  Contract Summary
+                </h5>
+              </div>
+              <div class="card-body">
+                <dl class="row mb-0">
+                  <dt class="col-6">Building:</dt>
+                  <dd class="col-6">{{ selectedBuilding?.name || '-' }}</dd>
+                  
+                  <dt class="col-6">Flat:</dt>
+                  <dd class="col-6">
+                    {{ selectedFlatNumber }}
+                  </dd>
+                  
+                  <dt class="col-6">Duration:</dt>
+                  <dd class="col-6">
+                    {{ calculateDuration() }} month(s)
+                  </dd>
+                  
+                  <dt class="col-6">Monthly Rent:</dt>
+                  <dd class="col-6">${{ monthlyRentValue | number:'1.2-2' }}</dd>
+                  
+                  <dt class="col-6">Total Value:</dt>
+                  <dd class="col-6">${{ totalDueAmount | number:'1.2-2' }}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions d-flex justify-content-end gap-2 mt-4">
+          <app-button 
+            type="button"
+            variant="secondary"
+            (click)="onCancel()"
+            [disabled]="isSubmitting">
+            Cancel
+          </app-button>
+          
+          <app-button 
+            type="submit"
+            variant="primary"
+            [disabled]="contractForm.invalid || overlapError || isSubmitting || isCheckingOverlap"
+            [loading]="isSubmitting">
+            <i class="bi bi-check-lg me-2" *ngIf="!isSubmitting"></i>
+            Create Contract
+          </app-button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,307 @@
+<div class="contract-details">
+  <!-- Loading State -->
+  <app-loading-spinner *ngIf="isLoading"></app-loading-spinner>
+
+  <!-- Error State -->
+  <app-empty-state 
+    *ngIf="!isLoading && hasError"
+    icon="exclamation-triangle"
+    title="Error Loading Contract"
+    message="We couldn't load the contract details. Please try again later."
+    actionLabel="Back to Contracts"
+    [actionHandler]="onBack.bind(this)">
+  </app-empty-state>
+
+  <!-- Contract Details -->
+  <div *ngIf="!isLoading && !hasError && contract" class="container-fluid px-0">
+    <!-- Header -->
+    <div class="details-header">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h2 class="h4 mb-1">Contract Details</h2>
+          <p class="text-muted mb-0">
+            Contract #{{ contract.id }} 
+            <span *ngIf="flat">• Flat {{ flat.flatNumber }}</span>
+          </p>
+        </div>
+        <app-button
+          variant="secondary"
+          size="sm"
+          icon="arrow-left"
+          (clicked)="onBack()">
+          Back
+        </app-button>
+      </div>
+    </div>
+
+    <!-- Status Alert -->
+    <div *ngIf="isExpiringSoon" class="alert alert-warning mb-4">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      This contract expires in {{ daysUntilExpiry }} days. Consider renewing it soon.
+    </div>
+
+    <!-- Main Content -->
+    <div class="row g-4">
+      <!-- Left Column -->
+      <div class="col-lg-8">
+        <!-- Contract Overview Card -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">Contract Overview</h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="text-muted small">Status</label>
+                <div>
+                  <span class="badge" [ngClass]="getStatusClass()">
+                    {{ contract.status }}
+                  </span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="text-muted small">Contract Period</label>
+                <div>{{ formatDate(contract.startDate) }} - {{ formatDate(contract.endDate) }}</div>
+              </div>
+              <div class="col-md-6">
+                <label class="text-muted small">Duration</label>
+                <div>{{ contractDuration }} months</div>
+              </div>
+              <div class="col-md-6">
+                <label class="text-muted small">Payment Due Day</label>
+                <div>{{ paymentDayWithSuffix }} of each month</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Financial Details Card -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">Financial Details</h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="text-muted small">Monthly Rent</label>
+                <div class="h5 mb-0">{{ contract.monthlyRent | currencyFormat }}</div>
+              </div>
+              <div class="col-md-4">
+                <label class="text-muted small">Security Deposit</label>
+                <div class="h5 mb-0">{{ contract.securityDeposit | currencyFormat }}</div>
+              </div>
+              <div class="col-md-4">
+                <label class="text-muted small">Total Contract Value</label>
+                <div class="h5 mb-0">{{ totalContractValue | currencyFormat }}</div>
+              </div>
+            </div>
+
+            <!-- Outstanding Balance -->
+            <div *ngIf="contract.outstandingBalance && contract.outstandingBalance > 0" 
+                 class="alert alert-danger mt-3 mb-0">
+              <i class="bi bi-exclamation-circle me-2"></i>
+              Outstanding Balance: {{ contract.outstandingBalance | currencyFormat }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Tenant Information Card -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">Tenant Information</h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="text-muted small">Name</label>
+                <div>{{ contract.tenantName || '-' }}</div>
+              </div>
+              <div class="col-md-4">
+                <label class="text-muted small">Contact</label>
+                <div>{{ contract.tenantContact ? (contract.tenantContact | phoneFormat) : '-' }}</div>
+              </div>
+              <div class="col-md-4">
+                <label class="text-muted small">Email</label>
+                <div>{{ contract.tenantEmail || '-' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flat Information Card (if available) -->
+        <div *ngIf="flat" class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Flat Information</h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="text-muted small">Flat Number</label>
+                <div>{{ flat.flatNumber }}</div>
+              </div>
+              <!-- Removed floor field as it's not in FlatResponse -->
+              <div class="col-md-6">
+                <label class="text-muted small">Rooms</label>
+                <div>{{ flat.numberOfRooms || '-' }}</div>
+              </div>
+              <div class="col-md-6">
+                <label class="text-muted small">Size</label>
+                <div>{{ flat.areaSqMeters ? flat.areaSqMeters + ' m²' : '-' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="col-lg-4">
+        <!-- Actions Card -->
+        <div class="card mb-4" *ngIf="canManageContracts">
+          <div class="card-header">
+            <h5 class="mb-0">Actions</h5>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <app-button
+                *ngIf="canRenew"
+                variant="primary"
+                size="md"
+                icon="arrow-repeat"
+                [fullWidth]="true"
+                (clicked)="onRenewContract()">
+                Renew Contract
+              </app-button>
+
+              <app-button
+                *ngIf="canModify"
+                variant="secondary"
+                size="md"
+                icon="pencil"
+                [fullWidth]="true"
+                (clicked)="onModifyContract()">
+                Modify Contract
+              </app-button>
+
+              <app-button
+                *ngIf="canCancel"
+                variant="danger"
+                size="md"
+                icon="x-circle"
+                [fullWidth]="true"
+                (clicked)="onCancelContract()">
+                Cancel Contract
+              </app-button>
+            </div>
+
+            <!-- Action unavailable messages -->
+            <div *ngIf="!canRenew && !canModify && !canCancel" class="text-muted text-center">
+              <i class="bi bi-info-circle"></i>
+              No actions available for this contract
+            </div>
+          </div>
+        </div>
+
+        <!-- Contract Health Card -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Contract Health</h5>
+          </div>
+          <div class="card-body">
+            <!-- Status -->
+            <div class="mb-3">
+              <label class="text-muted small">Current Status</label>
+              <div class="d-flex align-items-center">
+                <span class="badge" [ngClass]="getStatusClass()">
+                  {{ contract.status }}
+                </span>
+                <span *ngIf="isExpiringSoon" class="ms-2 text-warning">
+                  <i class="bi bi-exclamation-triangle"></i>
+                  Expiring Soon
+                </span>
+              </div>
+            </div>
+
+            <!-- Days Until Expiry -->
+            <div *ngIf="isActive" class="mb-3">
+              <label class="text-muted small">Days Until Expiry</label>
+              <div>
+                <span [class.text-danger]="daysUntilExpiry <= 7"
+                      [class.text-warning]="daysUntilExpiry > 7 && daysUntilExpiry <= 30">
+                  {{ daysUntilExpiry }} days
+                </span>
+              </div>
+            </div>
+
+            <!-- Outstanding Balance -->
+            <div class="mb-3">
+              <label class="text-muted small">Outstanding Balance</label>
+              <div>
+                <span [class.text-success]="!contract.outstandingBalance || contract.outstandingBalance === 0"
+                      [class.text-danger]="contract.outstandingBalance && contract.outstandingBalance > 0">
+                  {{ contract.outstandingBalance ? (contract.outstandingBalance | currencyFormat) : '$0.00' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Overdue Dues -->
+            <div *ngIf="contract.hasOverdueDues" class="alert alert-danger mb-0">
+              <i class="bi bi-exclamation-circle me-2"></i>
+              This contract has overdue payments
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="row mt-4" *ngIf="contract.notes || contract.previousContractId">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Additional Information</h5>
+          </div>
+          <div class="card-body">
+            <!-- Notes -->
+            <div *ngIf="contract.notes" class="mb-3">
+              <label class="text-muted small">Notes</label>
+              <div class="text-pre-wrap">{{ contract.notes }}</div>
+            </div>
+
+            <!-- Previous Contract -->
+            <div *ngIf="contract.previousContractId">
+              <label class="text-muted small">Previous Contract</label>
+              <div>
+                <a [routerLink]="['/dashboard/contracts', contract.previousContractId]" 
+                   class="text-decoration-none">
+                  View Contract #{{ contract.previousContractId }}
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status History (if cancelled or superseded) -->
+    <div class="row mt-4" *ngIf="isCancelled || isSuperseded || isRenewed">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Status History</h5>
+          </div>
+          <div class="card-body">
+            <div *ngIf="contract.statusChangedAt" class="mb-2">
+              <strong>Status Changed:</strong> {{ formatDate(contract.statusChangedAt) }}
+            </div>
+            <div *ngIf="contract.statusChangedBy" class="mb-2">
+              <strong>Changed By:</strong> {{ contract.statusChangedBy }}
+            </div>
+            <div *ngIf="contract.statusChangeReason">
+              <strong>Reason:</strong> {{ contract.statusChangeReason }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

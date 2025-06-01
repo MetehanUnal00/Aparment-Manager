@@ -11,8 +11,8 @@
       <app-button
         *ngIf="canManageContracts"
         variant="primary"
-        (click)="createContract()"
-        [icon]="'add'"
+        (clicked)="createContract()"
+        [icon]="'plus'"
       >
         New Contract
       </app-button>
@@ -43,10 +43,10 @@
         <div class="filter-item">
           <label>Building</label>
           <select formControlName="buildingId" class="form-control">
-            <option [value]="null">All Buildings</option>
+            <option [ngValue]="null">All Buildings</option>
             <option 
               *ngFor="let building of buildings$ | async" 
-              [value]="building.id"
+              [ngValue]="building.id"
             >
               {{ building.name }}
             </option>
@@ -57,8 +57,8 @@
         <div class="filter-item">
           <label>Status</label>
           <select formControlName="status" class="form-control">
-            <option [value]="null">All Statuses</option>
-            <option *ngFor="let status of contractStatuses" [value]="status">
+            <option [ngValue]="null">All Statuses</option>
+            <option *ngFor="let status of contractStatuses" [ngValue]="status">
               {{ status }}
             </option>
           </select>
@@ -68,11 +68,11 @@
         <div class="filter-item">
           <label>Expiring Within</label>
           <select formControlName="expiringWithinDays" class="form-control">
-            <option [value]="null">Any Time</option>
-            <option [value]="7">7 Days</option>
-            <option [value]="14">14 Days</option>
-            <option [value]="30">30 Days</option>
-            <option [value]="60">60 Days</option>
+            <option [ngValue]="null">Any Time</option>
+            <option [ngValue]="7">7 Days</option>
+            <option [ngValue]="14">14 Days</option>
+            <option [ngValue]="30">30 Days</option>
+            <option [ngValue]="60">60 Days</option>
           </select>
         </div>
 

@@ -1,0 +1,213 @@
+@import '../../../../styles.scss';
+
+.contract-form {
+  // Form sections styling
+  .card {
+    background-color: $card-bg-dark;
+    border: 1px solid $border-subtle;
+    
+    .card-header {
+      background-color: rgba($bright-cyan, 0.1);
+      border-bottom: 1px solid $border-subtle;
+      
+      h5 {
+        color: $bright-cyan;
+        font-weight: 500;
+        
+        i {
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+  
+  // Required field indicator
+  .form-label.required::after {
+    content: ' *';
+    color: $danger-red;
+  }
+  
+  // Form controls
+  .form-control,
+  .form-select {
+    background-color: rgba($pure-white, 0.05);
+    border-color: $border-subtle;
+    color: $pure-white;
+    
+    &:focus {
+      background-color: rgba($pure-white, 0.08);
+      border-color: $electric-blue;
+      box-shadow: 0 0 0 0.25rem rgba($electric-blue, 0.25);
+      color: $pure-white;
+    }
+    
+    &:disabled {
+      background-color: rgba($warm-gray, 0.1);
+      color: $warm-gray;
+      cursor: not-allowed;
+    }
+    
+    &.is-invalid {
+      border-color: $danger-red;
+      
+      &:focus {
+        box-shadow: 0 0 0 0.25rem rgba($danger-red, 0.25);
+      }
+    }
+  }
+  
+  // Select options
+  option {
+    background-color: $dark-navy;
+    color: $pure-white;
+  }
+  
+  // Input groups
+  .input-group-text {
+    background-color: rgba($bright-cyan, 0.1);
+    border-color: $border-subtle;
+    color: $bright-cyan;
+  }
+  
+  // Form text and feedback
+  .form-text {
+    color: $warm-gray;
+    font-size: 0.875rem;
+  }
+  
+  .invalid-feedback {
+    color: $danger-red;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+  
+  // Checkbox styling
+  .form-check-input {
+    background-color: rgba($pure-white, 0.05);
+    border-color: $border-subtle;
+    
+    &:checked {
+      background-color: $electric-blue;
+      border-color: $electric-blue;
+    }
+    
+    &:focus {
+      box-shadow: 0 0 0 0.25rem rgba($electric-blue, 0.25);
+    }
+  }
+  
+  // Alert styling
+  .alert {
+    border: none;
+    
+    &.alert-danger {
+      background-color: rgba($danger-red, 0.1);
+      color: $danger-red;
+    }
+    
+    &.alert-info {
+      background-color: rgba($info-blue, 0.1);
+      color: $info-blue;
+    }
+  }
+  
+  // Spinner styling
+  .spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
+  }
+  
+  // Due preview table
+  .table {
+    color: $pure-white;
+    
+    th {
+      color: $bright-cyan;
+      font-weight: 500;
+      border-color: $border-subtle;
+    }
+    
+    td {
+      border-color: $border-subtle;
+    }
+    
+    tfoot {
+      th {
+        color: $electric-blue;
+        font-weight: 600;
+      }
+    }
+  }
+  
+  // Contract summary
+  dl {
+    dt {
+      color: $warm-gray;
+      font-weight: normal;
+    }
+    
+    dd {
+      color: $pure-white;
+      font-weight: 500;
+    }
+  }
+  
+  // Sticky sidebar on desktop
+  @media (min-width: 992px) {
+    .sticky-top {
+      position: sticky !important;
+    }
+  }
+  
+  // Mobile adjustments
+  @media (max-width: 991px) {
+    .sticky-top {
+      position: static !important;
+    }
+    
+    .card {
+      margin-bottom: 1rem !important;
+    }
+  }
+}
+
+// Form actions
+.form-actions {
+  border-top: 1px solid $border-subtle;
+  padding-top: 1.5rem;
+  
+  @media (max-width: 576px) {
+    flex-direction: column !important;
+    
+    app-button {
+      width: 100%;
+    }
+  }
+}
+
+// Page header
+.page-header {
+  h1 {
+    color: $bright-cyan;
+  }
+  
+  p {
+    margin-bottom: 0;
+  }
+}
+
+// Loading state overlay
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba($dark-navy, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 0.375rem;
+}

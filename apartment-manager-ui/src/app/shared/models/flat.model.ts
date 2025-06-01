@@ -24,6 +24,7 @@ export interface FlatResponse {
   tenantMoveInDate?: string;
   isActive: boolean;
   currentBalance?: number;
+  hasActiveContract?: boolean;
 }
 
 /**

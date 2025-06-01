@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil, combineLatest, BehaviorSubject, of } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil, combineLatest, BehaviorSubject, of, take } from 'rxjs';
 import { Router } from '@angular/router';
 
 // Shared imports
@@ -102,7 +102,10 @@ export class ContractListComponent implements OnInit, OnDestroy {
     this.authService.currentUser.pipe(
       takeUntil(this.destroy$)
     ).subscribe(user => {
-      this.canManageContracts = user?.roles?.includes('ADMIN') || user?.roles?.includes('MANAGER') || false;
+      // Check if user has ADMIN or MANAGER role
+      const hasAdminRole = user?.roles?.some((role: any) => role.authority === 'ROLE_ADMIN');
+      const hasManagerRole = user?.roles?.some((role: any) => role.authority === 'ROLE_MANAGER');
+      this.canManageContracts = hasAdminRole || hasManagerRole || false;
     });
 
     // Set up search with debounce
@@ -163,29 +166,55 @@ export class ContractListComponent implements OnInit, OnDestroy {
 
     // If user is a manager and no building is selected, don't load
     this.currentUser$.pipe(
+      take(1),
       switchMap(user => {
-        if (user?.roles?.includes('MANAGER') && !user?.roles?.includes('ADMIN') && !filters.buildingId) {
+        // Check if user needs to select a building
+        const isManager = user?.roles?.includes('MANAGER');
+        const isAdmin = user?.roles?.includes('ADMIN');
+        const needsBuildingSelection = isManager && !isAdmin && !filters.buildingId;
+
+        if (needsBuildingSelection) {
           this.notificationService.warning('Please select a building to view contracts');
           this.loading$.next(false);
-          return [];
+          return of({ 
+            content: [], 
+            totalElements: 0, 
+            totalPages: 0, 
+            number: 0, 
+            size: pageParams.size, 
+            first: true, 
+            last: true, 
+            empty: true 
+          } as PaginatedResponse<ContractSummaryResponse>);
         }
 
-        // Use building-specific endpoint if building is selected
+        // Use building-specific endpoint if building is selected and valid
         if (filters.buildingId) {
           return this.contractService.getContractsByBuilding(
             filters.buildingId,
             pageParams,
             { forceRefresh: false, enablePolling: false }
           );
-        } else if (filters.tenantName) {
+        } else if (filters.tenantName && filters.tenantName.trim() !== '') {
           // Use search endpoint only when there's a search term
           return this.contractService.searchContracts(filters, pageParams);
         } else {
           // For admin users without a building selected and no search term,
-          // we need to show a message or load from first building
-          this.notificationService.info('Please select a building or search by tenant name to view contracts');
+          // show a helpful message
+          if (!filters.buildingId) {
+            this.notificationService.info('Please select a building or search by tenant name to view contracts');
+          }
           this.loading$.next(false);
-          return of({ content: [], totalElements: 0, totalPages: 0, number: 0, size: pageParams.size, first: true, last: true, empty: true } as PaginatedResponse<ContractSummaryResponse>);
+          return of({ 
+            content: [], 
+            totalElements: 0, 
+            totalPages: 0, 
+            number: 0, 
+            size: pageParams.size, 
+            first: true, 
+            last: true, 
+            empty: true 
+          } as PaginatedResponse<ContractSummaryResponse>);
         }
       }),
       takeUntil(this.destroy$)
@@ -211,19 +240,20 @@ export class ContractListComponent implements OnInit, OnDestroy {
     const formValue = this.filterForm.value;
     const params: ContractSearchParams = {};
 
-    if (formValue.buildingId) {
-      params.buildingId = formValue.buildingId;
+    // Check for valid building ID (not null or "null" string)
+    if (formValue.buildingId && formValue.buildingId !== 'null') {
+      params.buildingId = Number(formValue.buildingId);
     }
-    if (formValue.status) {
+    if (formValue.status && formValue.status !== 'null') {
       params.status = formValue.status;
     }
-    if (formValue.tenantName) {
-      params.tenantName = formValue.tenantName;
+    if (formValue.tenantName && formValue.tenantName.trim() !== '') {
+      params.tenantName = formValue.tenantName.trim();
     }
-    if (formValue.expiringWithinDays) {
-      params.expiringWithinDays = formValue.expiringWithinDays;
+    if (formValue.expiringWithinDays && formValue.expiringWithinDays !== 'null') {
+      params.expiringWithinDays = Number(formValue.expiringWithinDays);
     }
-    if (formValue.hasOverdueDues) {
+    if (formValue.hasOverdueDues === true) {
       params.hasOverdueDues = formValue.hasOverdueDues;
     }
 
