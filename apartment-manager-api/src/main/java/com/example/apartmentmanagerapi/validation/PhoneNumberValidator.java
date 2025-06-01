@@ -14,9 +14,10 @@ public class PhoneNumberValidator implements ConstraintValidator<ValidPhoneNumbe
     /**
      * Regex pattern for validating phone numbers.
      * Supports various international and US formats.
+     * Updated to support formats like Turkish phones: +90 542 604 53 06
      */
     private static final Pattern PHONE_PATTERN = Pattern.compile(
-            "^(\\+\\d{1,3}[- ]?)?\\(?\\d{1,4}\\)?[- ]?\\d{1,4}[- ]?\\d{1,9}$"
+            "^(\\+\\d{1,3}[- ]?)?(\\(?\\d{1,4}\\)?[- ]?)(\\d{1,4}[- ]?)*(\\d{1,4})$"
     );
     
     /**

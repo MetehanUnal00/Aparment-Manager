@@ -1,3 +1,5 @@
+@import '../../styles';
+
 .dashboard-container {
   display: flex;
   flex-direction: column;
@@ -5,10 +7,10 @@
 }
 
 .dashboard-header {
-  background-color: #1a1d29; // Using card-bg-dark for header
-  color: #ffffff;
+  background-color: $card-bg-dark; // Using card-bg-dark for header
+  color: $pure-white;
   padding: 15px 0;
-  border-bottom: 1px solid #2c2e33;
+  border-bottom: 1px solid $border-subtle;
 
   .header-content {
     max-width: 1200px;
@@ -22,7 +24,7 @@
       margin: 0;
       font-size: 1.75rem;
       font-weight: 500;
-      color: #00d4ff; // bright-cyan for branding
+      color: $bright-cyan; // bright-cyan for branding
     }
 
     .user-info {
@@ -32,7 +34,7 @@
 
       .username {
         font-weight: 500;
-        color: #868e96; // warm-gray
+        color: $warm-gray; // warm-gray
       }
 
       .btn {
@@ -43,8 +45,8 @@
 }
 
 .dashboard-nav {
-  background-color: #1a1d29; // card-bg-dark
-  border-bottom: 1px solid #2c2e33;
+  background-color: $card-bg-dark; // card-bg-dark
+  border-bottom: 1px solid $border-subtle;
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -56,7 +58,7 @@
     border-bottom: none;
 
     .nav-link {
-      color: #868e96; // warm-gray
+      color: $warm-gray; // warm-gray
       border: none;
       border-bottom: 3px solid transparent;
       padding: 12px 20px;
@@ -69,14 +71,14 @@
       }
 
       &:hover {
-        color: #00d4ff; // bright-cyan
-        background-color: rgba(0, 212, 255, 0.05);
+        color: $bright-cyan; // bright-cyan
+        background-color: rgba($bright-cyan, 0.05);
       }
 
       &.active {
-        color: #00d4ff; // bright-cyan
+        color: $bright-cyan; // bright-cyan
         background-color: transparent;
-        border-bottom-color: #00d4ff;
+        border-bottom-color: $bright-cyan;
       }
     }
   }
@@ -84,7 +86,7 @@
 
 .dashboard-content {
   flex-grow: 1;
-  background-color: #0a0e1a; // dark-navy
+  background-color: $dark-navy; // dark-navy
   
   > * {
     max-width: 1200px;
@@ -94,12 +96,12 @@
 }
 
 .dashboard-footer {
-  background-color: #1a1d29; // card-bg-dark
-  color: #868e96; // warm-gray
+  background-color: $card-bg-dark; // card-bg-dark
+  color: $warm-gray; // warm-gray
   text-align: center;
   padding: 15px 20px;
   font-size: 0.875rem;
-  border-top: 1px solid #2c2e33;
+  border-top: 1px solid $border-subtle;
 
   p {
     margin: 0;

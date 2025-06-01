@@ -46,6 +46,7 @@ $input-bg: $card-bg-dark;
 $input-border-color: $border-subtle;
 $input-color: $pure-white;
 $input-placeholder-color: $warm-gray;
+$text-muted: $pure-white;
 
 // Import Bootstrap after custom variables
 @import 'bootstrap/scss/bootstrap';
@@ -85,6 +86,11 @@ app-root {
 .text-pink-magenta { color: $pink-magenta !important; }
 .text-warm-gray { color: $warm-gray !important; }
 
+// Override Bootstrap's text-muted class to use pure white
+.text-muted { 
+  color: $pure-white !important; 
+}
+
 .border-subtle { border-color: $border-subtle !important; }
 
 // Custom component styles
@@ -103,6 +109,27 @@ app-root {
     background-color: rgba($dark-navy, 0.5);
     border-bottom: 1px solid $border-subtle;
   }
+  
+  .card-body {
+    background-color: $card-bg-dark;
+    color: $pure-white;
+  }
+}
+
+// Override Bootstrap's bg-light and other light backgrounds
+.bg-light {
+  background-color: $card-bg-dark !important;
+}
+
+.bg-white {
+  background-color: $card-bg-dark !important;
+}
+
+// Summary boxes and similar components
+.summary-box, .summary-card {
+  background-color: $card-bg-dark !important;
+  border: 1px solid $border-subtle !important;
+  color: $pure-white !important;
 }
 
 // Custom button styles
@@ -190,6 +217,11 @@ app-root {
 
   thead {
     border-bottom: 2px solid $border-subtle;
+    
+    th {
+      color: $pure-white;
+      border-bottom-color: $border-subtle;
+    }
   }
 
   tbody tr {
@@ -197,6 +229,11 @@ app-root {
 
     &:hover {
       background-color: rgba($bright-cyan, 0.05);
+    }
+    
+    td {
+      color: $pure-white;
+      border-bottom-color: $border-subtle;
     }
   }
 }

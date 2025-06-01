@@ -40,7 +40,7 @@ import { CommonModule } from '@angular/common';
       width: 0;
       height: 0;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.1);
       transform: translate(-50%, -50%);
       transition: width 0.6s, height 0.6s;
     }
@@ -54,12 +54,12 @@ import { CommonModule } from '@angular/common';
     button.btn-accent {
       background-color: #e64980;
       border-color: #e64980;
-      color: white;
+      color: #ffffff;
     }
 
     button.btn-accent:hover:not(:disabled) {
-      background-color: #c92a5a;
-      border-color: #c92a5a;
+      background-color: #d13366;
+      border-color: #d13366;
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(230, 73, 128, 0.3);
     }

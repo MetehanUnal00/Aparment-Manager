@@ -1,0 +1,243 @@
+<div class="flat-list">
+  <!-- Page header -->
+  <div class="page-header">
+    <h2>Flat Management</h2>
+    <div class="header-actions">
+      <app-button
+        variant="accent"
+        (click)="createFlat()"
+        [disabled]="!selectedBuildingId">
+        <i class="bi bi-plus-circle me-2"></i>
+        Add New Flat
+      </app-button>
+    </div>
+  </div>
+
+  <!-- Building selector and controls -->
+  <div class="controls-section">
+    <div class="control-row">
+      <div class="building-selector">
+        <label for="buildingSelect" class="form-label">Select Building</label>
+        <select 
+          id="buildingSelect"
+          class="form-select"
+          [value]="selectedBuildingId"
+          (change)="onBuildingChange($event)"
+          [disabled]="loading || buildings.length === 0">
+          <option [value]="null" disabled>-- Select a Building --</option>
+          <option *ngFor="let building of buildings" [value]="building.id">
+            {{ building.name }}
+          </option>
+        </select>
+      </div>
+
+      <div class="control-buttons">
+        <button 
+          class="btn btn-sm"
+          [class.btn-outline-cyan]="!autoRefreshEnabled"
+          [class.btn-cyan]="autoRefreshEnabled"
+          (click)="toggleAutoRefresh()"
+          [disabled]="!selectedBuildingId">
+          <i class="bi" [class.bi-play-circle]="!autoRefreshEnabled" [class.bi-pause-circle]="autoRefreshEnabled"></i>
+          {{ autoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}
+        </button>
+        
+        <button 
+          class="btn btn-sm btn-outline-secondary"
+          (click)="refreshData()"
+          [disabled]="loading || !selectedBuildingId">
+          <i class="bi bi-arrow-clockwise"></i>
+          Refresh
+        </button>
+
+        <button 
+          class="btn btn-sm"
+          [class.btn-outline-info]="!showActiveOnly"
+          [class.btn-info]="showActiveOnly"
+          (click)="toggleActiveFilter()"
+          [disabled]="!selectedBuildingId">
+          <i class="bi bi-check-circle"></i>
+          {{ showActiveOnly ? 'Active Only' : 'Show All' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Search box -->
+    <div class="search-section" *ngIf="selectedBuildingId">
+      <app-search-box
+        placeholder="Search by flat number, tenant name, or email..."
+        (search)="onSearchChange($event)">
+      </app-search-box>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <app-loading-spinner 
+    *ngIf="loading"
+    message="Loading flats...">
+  </app-loading-spinner>
+
+  <!-- Empty state when no building selected -->
+  <app-empty-state
+    *ngIf="!loading && buildings.length === 0"
+    icon="building"
+    title="No Buildings Found"
+    message="Create a building first to manage flats."
+    actionLabel="Create Building"
+    [actionHandler]="navigateToAddBuilding">
+  </app-empty-state>
+
+  <!-- Empty state when no flats -->
+  <app-empty-state
+    *ngIf="!loading && selectedBuildingId && flats.length === 0"
+    icon="house-door"
+    title="No Flats Found"
+    message="This building doesn't have any flats yet."
+    actionLabel="Add First Flat"
+    [actionHandler]="createFlat.bind(this)">
+  </app-empty-state>
+
+  <!-- Empty state for search results -->
+  <app-empty-state
+    *ngIf="!loading && filteredFlats.length === 0 && flats.length > 0"
+    icon="search"
+    title="No Flats Match Your Search"
+    message="Try adjusting your search criteria or filters.">
+  </app-empty-state>
+
+  <!-- Flats table -->
+  <div class="flats-table-container" *ngIf="!loading && filteredFlats.length > 0">
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th (click)="sort('flatNumber')" class="sortable">
+              Flat Number
+              <i class="bi" 
+                [class.bi-chevron-up]="sortColumn === 'flatNumber' && sortDirection === 'asc'"
+                [class.bi-chevron-down]="sortColumn === 'flatNumber' && sortDirection === 'desc'"></i>
+            </th>
+            <th>Status</th>
+            <th (click)="sort('tenantName')" class="sortable">
+              Tenant
+              <i class="bi" 
+                [class.bi-chevron-up]="sortColumn === 'tenantName' && sortDirection === 'asc'"
+                [class.bi-chevron-down]="sortColumn === 'tenantName' && sortDirection === 'desc'"></i>
+            </th>
+            <th>Contact</th>
+            <th (click)="sort('numberOfRooms')" class="sortable text-center">
+              Rooms
+              <i class="bi" 
+                [class.bi-chevron-up]="sortColumn === 'numberOfRooms' && sortDirection === 'asc'"
+                [class.bi-chevron-down]="sortColumn === 'numberOfRooms' && sortDirection === 'desc'"></i>
+            </th>
+            <th (click)="sort('areaSqMeters')" class="sortable text-center">
+              Area (m²)
+              <i class="bi" 
+                [class.bi-chevron-up]="sortColumn === 'areaSqMeters' && sortDirection === 'asc'"
+                [class.bi-chevron-down]="sortColumn === 'areaSqMeters' && sortDirection === 'desc'"></i>
+            </th>
+            <th (click)="sort('monthlyRent')" class="sortable text-end">
+              Monthly Rent
+              <i class="bi" 
+                [class.bi-chevron-up]="sortColumn === 'monthlyRent' && sortDirection === 'asc'"
+                [class.bi-chevron-down]="sortColumn === 'monthlyRent' && sortDirection === 'desc'"></i>
+            </th>
+            <th (click)="sort('currentBalance')" class="sortable text-end">
+              Balance
+              <i class="bi" 
+                [class.bi-chevron-up]="sortColumn === 'currentBalance' && sortDirection === 'asc'"
+                [class.bi-chevron-down]="sortColumn === 'currentBalance' && sortDirection === 'desc'"></i>
+            </th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let flat of filteredFlats" [class.table-inactive]="!flat.isActive">
+            <td class="fw-medium">{{ flat.flatNumber }}</td>
+            <td>
+              <span class="badge" [ngClass]="getOccupancyBadgeClass(flat)">
+                {{ getOccupancyStatus(flat) }}
+              </span>
+              <span class="badge badge-warning ms-1" *ngIf="!flat.isActive">
+                Inactive
+              </span>
+            </td>
+            <td>{{ flat.tenantName || '-' }}</td>
+            <td>
+              <div class="contact-info">
+                <small class="text-muted d-block" *ngIf="flat.tenantContact">
+                  <i class="bi bi-telephone me-1"></i>{{ flat.tenantContact }}
+                </small>
+                <small class="text-muted d-block" *ngIf="flat.tenantEmail">
+                  <i class="bi bi-envelope me-1"></i>{{ flat.tenantEmail }}
+                </small>
+                <small class="text-muted" *ngIf="!flat.tenantContact && !flat.tenantEmail">-</small>
+              </div>
+            </td>
+            <td class="text-center">{{ flat.numberOfRooms || '-' }}</td>
+            <td class="text-center">{{ flat.areaSqMeters || '-' }}</td>
+            <td class="text-end">
+              {{ flat.monthlyRent ? formatCurrency(flat.monthlyRent) : '-' }}
+            </td>
+            <td class="text-end" [ngClass]="getBalanceClass(flat.currentBalance || 0)">
+              {{ formatCurrency(flat.currentBalance || 0) }}
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button 
+                  class="btn btn-sm btn-outline-info"
+                  (click)="viewFlat(flat)"
+                  title="View Details">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button 
+                  class="btn btn-sm btn-outline-primary"
+                  (click)="editFlat(flat)"
+                  title="Edit Flat">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button 
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="confirmDelete(flat)"
+                  title="Deactivate Flat"
+                  [disabled]="!flat.isActive">
+                  <i class="bi bi-x-circle"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Summary footer -->
+    <div class="table-footer" *ngIf="selectedBuilding">
+      <div class="summary-info">
+        <span class="summary-item">
+          <strong>Building:</strong> {{ selectedBuilding.name }}
+        </span>
+        <span class="summary-item">
+          <strong>Total Flats:</strong> {{ flats.length }}
+        </span>
+        <span class="summary-item">
+          <strong>Active:</strong> {{ getActiveFlatsCount() }}
+        </span>
+        <span class="summary-item">
+          <strong>Occupied:</strong> {{ getOccupiedFlatsCount() }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation dialog -->
+  <app-confirm-dialog
+    [isOpen]="showDeleteConfirm"
+    title="Deactivate Flat"
+    [message]="'Are you sure you want to deactivate flat ' + flatToDelete?.flatNumber + '? The flat will be marked as inactive but historical data will be preserved.'"
+    confirmText="Deactivate"
+    [isDestructive]="true"
+    (confirm)="onDeleteConfirm(true)"
+    (cancel)="onDeleteConfirm(false)">
+  </app-confirm-dialog>
+</div>

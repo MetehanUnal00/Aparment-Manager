@@ -1,0 +1,365 @@
+<div class="flat-form">
+  <!-- Page header -->
+  <div class="page-header">
+    <h2>{{ pageTitle }}</h2>
+  </div>
+
+  <!-- Loading state -->
+  <app-loading-spinner 
+    *ngIf="isLoading"
+    message="Loading flat details...">
+  </app-loading-spinner>
+
+  <!-- Form -->
+  <form 
+    #flatForm="ngForm" 
+    (ngSubmit)="onSubmit(flatForm)"
+    *ngIf="!isLoading"
+    class="flat-form-content">
+    
+    <!-- Basic Information Card -->
+    <div class="form-card">
+      <h3 class="card-title">
+        <i class="bi bi-info-circle me-2"></i>
+        Basic Information
+      </h3>
+
+      <div class="form-row">
+        <!-- Building Selection -->
+        <div class="form-group">
+          <label for="buildingId" class="form-label required">
+            Building
+          </label>
+          <select
+            id="buildingId"
+            name="apartmentBuildingId"
+            class="form-control"
+            [(ngModel)]="formData.apartmentBuildingId"
+            #buildingSelect="ngModel"
+            (change)="onBuildingChange()"
+            required
+            [disabled]="isEditMode">
+            <option [value]="0" disabled>-- Select a Building --</option>
+            <option *ngFor="let building of buildings" [value]="building.id">
+              {{ building.name }}
+            </option>
+          </select>
+          
+          <app-form-errors
+            [errors]="buildingSelect.errors"
+            [showErrors]="!!(buildingSelect.invalid && buildingSelect.touched)"
+            fieldName="Building">
+          </app-form-errors>
+        </div>
+
+        <!-- Flat Number -->
+        <div class="form-group">
+          <label for="flatNumber" class="form-label required">
+            Flat Number
+          </label>
+          <input
+            type="text"
+            id="flatNumber"
+            name="flatNumber"
+            class="form-control"
+            [(ngModel)]="formData.flatNumber"
+            #flatNumber="ngModel"
+            required
+            minlength="1"
+            maxlength="20"
+            placeholder="e.g., 101, A1, Ground-2"
+            [class.is-invalid]="flatNumber.invalid && flatNumber.touched">
+          
+          <app-form-errors
+            [errors]="flatNumber.errors"
+            [showErrors]="!!(flatNumber.invalid && flatNumber.touched)"
+            fieldName="Flat number">
+          </app-form-errors>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <!-- Number of Rooms -->
+        <div class="form-group">
+          <label for="numberOfRooms" class="form-label">
+            Number of Rooms
+          </label>
+          <input
+            type="number"
+            id="numberOfRooms"
+            name="numberOfRooms"
+            class="form-control"
+            [(ngModel)]="formData.numberOfRooms"
+            #numberOfRooms="ngModel"
+            min="1"
+            max="20"
+            placeholder="e.g., 3"
+            [class.is-invalid]="numberOfRooms.invalid && numberOfRooms.touched">
+          
+          <app-form-errors
+            [errors]="numberOfRooms.errors"
+            [showErrors]="!!(numberOfRooms.invalid && numberOfRooms.touched)"
+            fieldName="Number of rooms">
+          </app-form-errors>
+        </div>
+
+        <!-- Area -->
+        <div class="form-group">
+          <label for="areaSqMeters" class="form-label">
+            Area (m²)
+          </label>
+          <input
+            type="number"
+            id="areaSqMeters"
+            name="areaSqMeters"
+            class="form-control"
+            [(ngModel)]="formData.areaSqMeters"
+            #areaSqMeters="ngModel"
+            min="1"
+            max="1000"
+            step="0.01"
+            placeholder="e.g., 85.50"
+            [class.is-invalid]="areaSqMeters.invalid && areaSqMeters.touched">
+          
+          <app-form-errors
+            [errors]="areaSqMeters.errors"
+            [showErrors]="!!(areaSqMeters.invalid && areaSqMeters.touched)"
+            fieldName="Area">
+          </app-form-errors>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tenant Information Card -->
+    <div class="form-card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="bi bi-person me-2"></i>
+          Tenant Information
+        </h3>
+        <button 
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          (click)="clearTenantInfo()"
+          *ngIf="hasTenantInfo"
+          title="Clear all tenant information">
+          <i class="bi bi-x-circle me-1"></i>
+          Clear
+        </button>
+      </div>
+
+      <div class="info-box" *ngIf="!hasTenantInfo">
+        <i class="bi bi-info-circle"></i>
+        <span>Leave tenant fields empty for vacant flats</span>
+      </div>
+
+      <div class="form-row">
+        <!-- Tenant Name -->
+        <div class="form-group">
+          <label for="tenantName" class="form-label">
+            Tenant Name
+          </label>
+          <input
+            type="text"
+            id="tenantName"
+            name="tenantName"
+            class="form-control"
+            [(ngModel)]="formData.tenantName"
+            #tenantName="ngModel"
+            maxlength="100"
+            placeholder="e.g., John Doe"
+            [class.is-invalid]="tenantName.invalid && tenantName.touched">
+          
+          <app-form-errors
+            [errors]="tenantName.errors"
+            [showErrors]="!!(tenantName.invalid && tenantName.touched)"
+            fieldName="Tenant name">
+          </app-form-errors>
+        </div>
+
+        <!-- Tenant Email -->
+        <div class="form-group">
+          <label for="tenantEmail" class="form-label">
+            Tenant Email
+          </label>
+          <input
+            type="email"
+            id="tenantEmail"
+            name="tenantEmail"
+            class="form-control"
+            [(ngModel)]="formData.tenantEmail"
+            #tenantEmail="ngModel"
+            email
+            maxlength="100"
+            placeholder="e.g., john.doe@example.com"
+            [class.is-invalid]="tenantEmail.invalid && tenantEmail.touched">
+          
+          <app-form-errors
+            [errors]="tenantEmail.errors"
+            [showErrors]="!!(tenantEmail.invalid && tenantEmail.touched)"
+            fieldName="Email">
+          </app-form-errors>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <!-- Tenant Contact -->
+        <div class="form-group">
+          <label for="tenantContact" class="form-label">
+            Tenant Phone
+          </label>
+          <input
+            type="tel"
+            id="tenantContact"
+            name="tenantContact"
+            class="form-control"
+            [(ngModel)]="formData.tenantContact"
+            #tenantContact="ngModel"
+            maxlength="20"
+            placeholder="e.g., +1 234 567 8900"
+            [class.is-invalid]="tenantContact.invalid && tenantContact.touched">
+          
+          <app-form-errors
+            [errors]="tenantContact.errors"
+            [showErrors]="!!(tenantContact.invalid && tenantContact.touched)"
+            fieldName="Phone number">
+          </app-form-errors>
+        </div>
+
+        <!-- Move-in Date -->
+        <div class="form-group">
+          <label for="tenantMoveInDate" class="form-label">
+            Move-in Date
+          </label>
+          <input
+            type="date"
+            id="tenantMoveInDate"
+            name="tenantMoveInDate"
+            class="form-control"
+            [(ngModel)]="formData.tenantMoveInDate"
+            #tenantMoveInDate="ngModel"
+            [max]="today"
+            [class.is-invalid]="tenantMoveInDate.invalid && tenantMoveInDate.touched">
+          
+          <app-form-errors
+            [errors]="tenantMoveInDate.errors"
+            [showErrors]="!!(tenantMoveInDate.invalid && tenantMoveInDate.touched)"
+            fieldName="Move-in date">
+          </app-form-errors>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Information Card -->
+    <div class="form-card">
+      <h3 class="card-title">
+        <i class="bi bi-currency-dollar me-2"></i>
+        Financial Information
+      </h3>
+
+      <div class="form-row">
+        <!-- Monthly Rent -->
+        <div class="form-group">
+          <label for="monthlyRent" class="form-label">
+            Monthly Rent
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input
+              type="number"
+              id="monthlyRent"
+              name="monthlyRent"
+              class="form-control"
+              [(ngModel)]="formData.monthlyRent"
+              #monthlyRent="ngModel"
+              min="0"
+              max="99999"
+              step="0.01"
+              placeholder="0.00"
+              [class.is-invalid]="monthlyRent.invalid && monthlyRent.touched">
+          </div>
+          
+          <app-form-errors
+            [errors]="monthlyRent.errors"
+            [showErrors]="!!(monthlyRent.invalid && monthlyRent.touched)"
+            fieldName="Monthly rent">
+          </app-form-errors>
+        </div>
+
+        <!-- Security Deposit -->
+        <div class="form-group">
+          <label for="securityDeposit" class="form-label">
+            Security Deposit
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input
+              type="number"
+              id="securityDeposit"
+              name="securityDeposit"
+              class="form-control"
+              [(ngModel)]="formData.securityDeposit"
+              #securityDeposit="ngModel"
+              min="0"
+              max="99999"
+              step="0.01"
+              placeholder="0.00"
+              [class.is-invalid]="securityDeposit.invalid && securityDeposit.touched">
+          </div>
+          
+          <app-form-errors
+            [errors]="securityDeposit.errors"
+            [showErrors]="!!(securityDeposit.invalid && securityDeposit.touched)"
+            fieldName="Security deposit">
+          </app-form-errors>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Card (only in edit mode) -->
+    <div class="form-card" *ngIf="isEditMode">
+      <h3 class="card-title">
+        <i class="bi bi-toggle-on me-2"></i>
+        Status
+      </h3>
+
+      <div class="form-group">
+        <div class="form-check form-switch">
+          <input
+            type="checkbox"
+            id="isActive"
+            name="isActive"
+            class="form-check-input"
+            [(ngModel)]="formData.isActive"
+            #isActive="ngModel">
+          <label for="isActive" class="form-check-label">
+            Flat is Active
+            <small class="text-muted d-block">
+              Inactive flats won't be included in monthly due generation
+            </small>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form actions -->
+    <div class="form-actions">
+      <app-button
+        variant="secondary"
+        type="button"
+        (click)="onCancel()"
+        [disabled]="isSubmitting">
+        Cancel
+      </app-button>
+      
+      <app-button
+        variant="cyan"
+        type="submit"
+        [disabled]="flatForm.invalid || isSubmitting"
+        [loading]="isSubmitting">
+        <i class="bi bi-check-circle me-2"></i>
+        {{ isEditMode ? 'Update Flat' : 'Create Flat' }}
+      </app-button>
+    </div>
+  </form>
+</div>
