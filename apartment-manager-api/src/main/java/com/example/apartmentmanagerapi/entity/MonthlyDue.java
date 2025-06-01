@@ -141,6 +141,26 @@ public class MonthlyDue {
     private LocalDateTime updatedAt;
     
     /**
+     * Contract reference for this monthly due
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contract_id")
+    private Contract contract;
+    
+    /**
+     * Payment status for easier filtering
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", length = 20)
+    private PaymentStatus paymentStatus;
+    
+    /**
+     * Description field for audit trail
+     */
+    @Column(name = "description", length = 500)
+    private String description;
+    
+    /**
      * Automatically set creation timestamp before persisting
      */
     @PrePersist
@@ -182,6 +202,16 @@ public class MonthlyDue {
     }
     
     /**
+     * Payment status enumeration
+     */
+    public enum PaymentStatus {
+        PENDING,
+        PAID,
+        OVERDUE,
+        CANCELLED
+    }
+    
+    /**
      * Helper method to check if this due is overdue
      * @return true if the due date has passed and status is UNPAID
      */
@@ -189,5 +219,21 @@ public class MonthlyDue {
         return status == DueStatus.UNPAID && 
                dueDate != null && 
                LocalDate.now().isAfter(dueDate);
+    }
+    
+    /**
+     * Check if this due is paid
+     * @return true if status is PAID
+     */
+    public boolean isPaid() {
+        return status == DueStatus.PAID;
+    }
+    
+    /**
+     * Get the amount for this due
+     * @return the due amount
+     */
+    public BigDecimal getAmount() {
+        return dueAmount;
     }
 }

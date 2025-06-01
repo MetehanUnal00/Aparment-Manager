@@ -139,7 +139,19 @@ public class AuditLog {
         // Expense actions
         EXPENSE_CREATED,
         EXPENSE_UPDATED,
-        EXPENSE_DELETED
+        EXPENSE_DELETED,
+        
+        // Contract actions
+        CONTRACT_CREATED,
+        CONTRACT_RENEWED,
+        CONTRACT_CANCELLED,
+        CONTRACT_MODIFIED,
+        CONTRACT_STATUS_CHANGED,
+        CONTRACT_DUES_GENERATED,
+        CONTRACT_DUES_GENERATION_FAILED,
+        CONTRACT_DUES_CANCELLED,
+        CONTRACT_RENEWAL_DUES_GENERATED,
+        CONTRACT_MODIFICATION_DUES_UPDATED
     }
     
     /**

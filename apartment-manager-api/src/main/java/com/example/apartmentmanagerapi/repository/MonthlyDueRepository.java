@@ -1,5 +1,6 @@
 package com.example.apartmentmanagerapi.repository;
 
+import com.example.apartmentmanagerapi.entity.Contract;
 import com.example.apartmentmanagerapi.entity.MonthlyDue;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -245,4 +246,27 @@ public interface MonthlyDueRepository extends JpaRepository<MonthlyDue, Long> {
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+    
+    /**
+     * Find all monthly dues for a specific contract
+     * @param contract The contract
+     * @return List of monthly dues for the contract
+     */
+    List<MonthlyDue> findByContract(Contract contract);
+    
+    /**
+     * Find all monthly dues for a specific contract by ID
+     * @param contractId The contract ID
+     * @return List of monthly dues for the contract
+     */
+    @Query("SELECT md FROM MonthlyDue md WHERE md.contract.id = :contractId ORDER BY md.dueDate")
+    List<MonthlyDue> findByContractId(@Param("contractId") Long contractId);
+    
+    /**
+     * Find monthly dues by contract and status
+     * @param contract The contract
+     * @param statuses List of statuses to filter by
+     * @return List of monthly dues matching the criteria
+     */
+    List<MonthlyDue> findByContractAndStatusIn(Contract contract, List<MonthlyDue.DueStatus> statuses);
 }
