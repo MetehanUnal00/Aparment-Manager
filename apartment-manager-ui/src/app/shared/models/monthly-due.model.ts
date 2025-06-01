@@ -59,6 +59,8 @@ export interface MonthlyDueRequest {
   baseRent?: number;
   additionalCharges?: number;
   additionalChargesDescription?: string;
+  useFlatsMonthlyRent?: boolean;
+  fallbackAmount?: number;
 }
 
 /**

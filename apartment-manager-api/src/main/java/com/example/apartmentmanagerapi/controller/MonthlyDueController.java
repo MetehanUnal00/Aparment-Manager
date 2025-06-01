@@ -88,15 +88,35 @@ public class MonthlyDueController {
     public ResponseEntity<List<MonthlyDueResponse>> generateMonthlyDues(
             @Valid @RequestBody MonthlyDueRequest request) {
         
-        log.info("Generating monthly dues for building ID: {} with amount: {}", 
-                request.getBuildingId(), request.getDueAmount());
-        
-        List<MonthlyDue> createdDues = monthlyDueService.generateMonthlyDuesForBuilding(
-                request.getBuildingId(),
+        log.info("Generating monthly dues for building ID: {} | Mode: {} | Amount: {} | Fallback: {}", 
+                request.getBuildingId(), 
+                Boolean.TRUE.equals(request.getUseFlatsMonthlyRent()) ? "FLAT_RENT_BASED" : "UNIFORM",
                 request.getDueAmount(),
-                request.getDueDate(),
-                request.getDueDescription()
-        );
+                request.getFallbackAmount());
+        
+        List<MonthlyDue> createdDues;
+        
+        // Check if we should use the enhanced method with rent-based generation
+        if (Boolean.TRUE.equals(request.getUseFlatsMonthlyRent()) || 
+            request.getFallbackAmount() != null) {
+            // Use enhanced method
+            createdDues = monthlyDueService.generateMonthlyDuesForBuilding(
+                    request.getBuildingId(),
+                    request.getDueAmount(),
+                    request.getDueDate(),
+                    request.getDueDescription(),
+                    Boolean.TRUE.equals(request.getUseFlatsMonthlyRent()),
+                    request.getFallbackAmount()
+            );
+        } else {
+            // Use original method for backward compatibility
+            createdDues = monthlyDueService.generateMonthlyDuesForBuilding(
+                    request.getBuildingId(),
+                    request.getDueAmount(),
+                    request.getDueDate(),
+                    request.getDueDescription()
+            );
+        }
         
         List<MonthlyDueResponse> responses = createdDues.stream()
                 .map(monthlyDueMapper::toResponse)
@@ -275,6 +295,43 @@ public class MonthlyDueController {
         
         List<MonthlyDue> overdueDues = monthlyDueService.getOverdueDuesByBuilding(buildingId);
         List<MonthlyDueResponse> responses = overdueDues.stream()
+                .map(monthlyDueMapper::toResponse)
+                .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(responses);
+    }
+    
+    @Operation(
+        summary = "Get all monthly dues for a building",
+        description = "Retrieves all monthly dues for a building regardless of status. Requires ADMIN or MANAGER role."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Monthly dues retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = MonthlyDueResponse.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized - JWT token is missing or invalid"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - User does not have required role"
+        )
+    })
+    @GetMapping("/building/{buildingId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<MonthlyDueResponse>> getAllDuesForBuilding(
+            @Parameter(description = "ID of the building", required = true)
+            @PathVariable Long buildingId) {
+        log.info("Retrieving all monthly dues for building ID: {}", buildingId);
+        
+        List<MonthlyDue> allDues = monthlyDueService.getAllMonthlyDuesForBuilding(buildingId);
+        List<MonthlyDueResponse> responses = allDues.stream()
                 .map(monthlyDueMapper::toResponse)
                 .collect(Collectors.toList());
         

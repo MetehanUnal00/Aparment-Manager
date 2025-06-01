@@ -403,11 +403,27 @@ export class FlatListComponent implements OnInit, OnDestroy {
 
   /**
    * Get balance class based on value
+   * Positive balance = tenant owes money (danger)
+   * Negative balance = tenant has credit (success)
+   * Zero balance = no dues (neutral)
    */
   getBalanceClass(balance: number): string {
-    if (balance > 0) return 'text-success';
-    if (balance < 0) return 'text-danger';
-    return '';
+    if (balance > 0) return 'text-danger';  // Tenant owes money
+    if (balance < 0) return 'text-success'; // Tenant has credit
+    return '';  // Balanced
+  }
+
+  /**
+   * Get balance tooltip explanation
+   */
+  getBalanceTooltip(balance: number): string {
+    if (balance > 0) {
+      return `Tenant owes ${this.formatCurrency(balance)}`;
+    } else if (balance < 0) {
+      return `Tenant has a credit of ${this.formatCurrency(Math.abs(balance))}`;
+    } else {
+      return 'No outstanding balance';
+    }
   }
 
   /**

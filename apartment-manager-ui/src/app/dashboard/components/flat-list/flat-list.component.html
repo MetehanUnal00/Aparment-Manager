@@ -145,6 +145,7 @@
             </th>
             <th (click)="sort('currentBalance')" class="sortable text-end">
               Balance
+              <i class="bi bi-info-circle ms-1" style="font-size: 0.875rem; opacity: 0.7;" title="Positive = Owes Money | Negative = Has Credit"></i>
               <i class="bi" 
                 [class.bi-chevron-up]="sortColumn === 'currentBalance' && sortDirection === 'asc'"
                 [class.bi-chevron-down]="sortColumn === 'currentBalance' && sortDirection === 'desc'"></i>
@@ -181,7 +182,10 @@
               {{ flat.monthlyRent ? formatCurrency(flat.monthlyRent) : '-' }}
             </td>
             <td class="text-end" [ngClass]="getBalanceClass(flat.currentBalance || 0)">
-              {{ formatCurrency(flat.currentBalance || 0) }}
+              <span [title]="getBalanceTooltip(flat.currentBalance || 0)">
+                {{ formatCurrency(flat.currentBalance || 0) }}
+                <i class="bi bi-info-circle ms-1" style="font-size: 0.875rem; opacity: 0.7;"></i>
+              </span>
             </td>
             <td>
               <div class="action-buttons">

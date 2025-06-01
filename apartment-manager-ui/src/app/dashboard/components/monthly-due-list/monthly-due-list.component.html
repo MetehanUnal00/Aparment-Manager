@@ -50,6 +50,18 @@
           Show Debtors Summary
         </label>
       </div>
+      <div class="form-check form-switch ms-3" *ngIf="!showDebtorsOnly">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          id="overdueToggle"
+          [(ngModel)]="showOverdueOnly"
+          (ngModelChange)="toggleOverdueFilter()"
+        >
+        <label class="form-check-label" for="overdueToggle">
+          Show Overdue Only
+        </label>
+      </div>
     </div>
   </div>
 
@@ -98,10 +110,10 @@
   ></app-empty-state>
 
   <app-empty-state
-    *ngIf="selectedBuildingId && !showDebtorsOnly && overdueDues.length === 0 && !(loading.isLoading$ | async)"
+    *ngIf="selectedBuildingId && !showDebtorsOnly && paginatedItems.length === 0 && !(loading.isLoading$ | async)"
     icon="bi-check-circle"
-    title="No Overdue Payments"
-    message="All monthly dues are up to date!"
+    [title]="showOverdueOnly ? 'No Overdue Payments' : 'No Monthly Dues'"
+    [message]="showOverdueOnly ? 'All monthly dues are up to date!' : 'No monthly dues have been generated yet'"
   ></app-empty-state>
 
   <app-empty-state
@@ -111,8 +123,8 @@
     message="All tenants have paid their dues!"
   ></app-empty-state>
 
-  <!-- Overdue dues table -->
-  <div class="table-container" *ngIf="selectedBuildingId && !showDebtorsOnly && overdueDues.length > 0 && !(loading.isLoading$ | async)">
+  <!-- Monthly dues table -->
+  <div class="table-container" *ngIf="selectedBuildingId && !showDebtorsOnly && paginatedItems.length > 0 && !(loading.isLoading$ | async)">
     <table class="table table-hover">
       <thead>
         <tr>
@@ -125,7 +137,7 @@
             Due Date
             <i class="bi bi-chevron-{{ sortBy === 'dueDate' && sortDirection === 'asc' ? 'up' : 'down' }}"></i>
           </th>
-          <th>Days Overdue</th>
+          <th>Status</th>
           <th (click)="sort('amount')" class="sortable text-end">
             Amount
             <i class="bi bi-chevron-{{ sortBy === 'amount' && sortDirection === 'asc' ? 'up' : 'down' }}"></i>
@@ -140,7 +152,17 @@
           <td>{{ due.flat.tenantName || 'Vacant' }}</td>
           <td>{{ due.dueDate | date:'MM/dd/yyyy' }}</td>
           <td>
-            <span class="badge bg-danger">{{ getDaysOverdue(due.dueDate) }} days</span>
+            <span class="badge" [ngClass]="{
+              'bg-success': due.status === 'PAID',
+              'bg-danger': due.status === 'OVERDUE' || (due.status === 'UNPAID' && getDaysOverdue(due.dueDate) > 0),
+              'bg-warning': due.status === 'UNPAID' && getDaysOverdue(due.dueDate) === 0,
+              'bg-secondary': due.status === 'CANCELLED'
+            }">
+              {{ due.status }}
+              <span *ngIf="(due.status === 'OVERDUE' || (due.status === 'UNPAID' && getDaysOverdue(due.dueDate) > 0))">
+                ({{ getDaysOverdue(due.dueDate) }} days)
+              </span>
+            </span>
           </td>
           <td class="text-end">{{ due.dueAmount | currencyFormat }}</td>
           <td>{{ due.dueDescription || 'Monthly Rent' }}</td>
@@ -290,18 +312,18 @@
               <div class="row">
                 <div class="col-6">
                   <select class="form-select" [(ngModel)]="generateMonth">
-                    <option [value]="1">January</option>
-                    <option [value]="2">February</option>
-                    <option [value]="3">March</option>
-                    <option [value]="4">April</option>
-                    <option [value]="5">May</option>
-                    <option [value]="6">June</option>
-                    <option [value]="7">July</option>
-                    <option [value]="8">August</option>
-                    <option [value]="9">September</option>
-                    <option [value]="10">October</option>
-                    <option [value]="11">November</option>
-                    <option [value]="12">December</option>
+                    <option [ngValue]="1">January</option>
+                    <option [ngValue]="2">February</option>
+                    <option [ngValue]="3">March</option>
+                    <option [ngValue]="4">April</option>
+                    <option [ngValue]="5">May</option>
+                    <option [ngValue]="6">June</option>
+                    <option [ngValue]="7">July</option>
+                    <option [ngValue]="8">August</option>
+                    <option [ngValue]="9">September</option>
+                    <option [ngValue]="10">October</option>
+                    <option [ngValue]="11">November</option>
+                    <option [ngValue]="12">December</option>
                   </select>
                 </div>
                 <div class="col-6">
@@ -316,8 +338,44 @@
               </div>
             </div>
 
+            <!-- Generation Mode Selection -->
             <div class="mb-3">
-              <label for="generateAmount" class="form-label">Amount</label>
+              <label class="form-label">Generation Mode</label>
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  name="generateMode"
+                  id="uniformMode"
+                  value="uniform"
+                  [(ngModel)]="generateMode"
+                  (ngModelChange)="onGenerationModeChange()"
+                >
+                <label class="form-check-label" for="uniformMode">
+                  <strong>Uniform Amount</strong> - Use the same amount for all flats
+                </label>
+              </div>
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  name="generateMode"
+                  id="rentBasedMode"
+                  value="rentBased"
+                  [(ngModel)]="generateMode"
+                  (ngModelChange)="onGenerationModeChange()"
+                >
+                <label class="form-check-label" for="rentBasedMode">
+                  <strong>Use Flat Monthly Rents</strong> - Use each flat's individual rent amount
+                </label>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="generateAmount" class="form-label">
+                {{ generateMode === 'uniform' ? 'Amount' : 'Ultimate Fallback Amount' }}
+                <span class="text-danger">*</span>
+              </label>
               <input
                 type="number"
                 id="generateAmount"
@@ -327,6 +385,29 @@
                 step="0.01"
                 required
               >
+              <small class="form-text text-muted" *ngIf="generateMode === 'rentBased'">
+                This amount will be used if both the flat's rent and primary fallback are not available
+              </small>
+            </div>
+
+            <!-- Fallback Amount (only for rent-based mode) -->
+            <div class="mb-3" *ngIf="generateMode === 'rentBased'">
+              <label for="fallbackAmount" class="form-label">
+                Primary Fallback Amount
+                <span class="text-muted">(optional)</span>
+              </label>
+              <input
+                type="number"
+                id="fallbackAmount"
+                class="form-control"
+                [(ngModel)]="fallbackAmount"
+                min="0.01"
+                step="0.01"
+                placeholder="Leave empty to use ultimate fallback"
+              >
+              <small class="form-text text-muted">
+                This amount will be used for flats that don't have a monthly rent set
+              </small>
             </div>
 
             <div class="mb-3">
@@ -342,8 +423,22 @@
 
             <div class="alert alert-info">
               <i class="bi bi-info-circle me-2"></i>
-              This will generate monthly dues for all active flats in the selected building.
-              Dues will be created with a due date of the 1st of the selected month.
+              <div *ngIf="generateMode === 'uniform'">
+                This will generate monthly dues for all active flats in the selected building
+                using the <strong>same amount</strong> for each flat.
+                Dues will be created with a due date of the 1st of the selected month.
+              </div>
+              <div *ngIf="generateMode === 'rentBased'">
+                This will generate monthly dues for all active flats in the selected building
+                using <strong>each flat's individual monthly rent</strong>.
+                <br><br>
+                <strong>Fallback behavior:</strong>
+                <ul class="mb-0">
+                  <li>Flats with monthly rent set: Will use their rent amount</li>
+                  <li>Flats without rent: Will use the primary fallback (if provided)</li>
+                  <li>If no primary fallback: Will use the ultimate fallback amount</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

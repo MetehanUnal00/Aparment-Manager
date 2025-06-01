@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -109,6 +110,160 @@ public class MonthlyDueService implements IMonthlyDueService {
         }
         
         return createdDues;
+    }
+    
+    /**
+     * Enhanced method that generates monthly dues with support for using each flat's monthly rent.
+     * Maintains backward compatibility through the original method above.
+     * 
+     * @param buildingId ID of the building
+     * @param dueAmount Amount to charge each flat (or ultimate fallback in rent-based mode)
+     * @param dueDate Due date for the monthly charge
+     * @param description Description of the charge
+     * @param useFlatsMonthlyRent Whether to use each flat's monthlyRent instead of uniform amount
+     * @param fallbackAmount Primary fallback for flats without rent (only used when useFlatsMonthlyRent=true)
+     * @return List of created monthly dues
+     */
+    @Transactional
+    @CacheEvict(value = {"debtorList", "buildingStatistics", "buildingFinancials"}, allEntries = true)
+    public List<MonthlyDue> generateMonthlyDuesForBuilding(
+            Long buildingId, 
+            BigDecimal dueAmount,
+            LocalDate dueDate, 
+            String description,
+            boolean useFlatsMonthlyRent,
+            BigDecimal fallbackAmount) {
+        
+        log.info("Generating monthly dues for building ID: {} | Mode: {} | Date: {} | " +
+                "DueAmount: {} | FallbackAmount: {}", 
+                buildingId, 
+                useFlatsMonthlyRent ? "FLAT_RENT_BASED" : "UNIFORM", 
+                dueDate,
+                dueAmount,
+                fallbackAmount);
+        
+        // Validate building exists
+        ApartmentBuilding building = apartmentBuildingRepository.findById(buildingId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Building not found with ID: " + buildingId));
+        
+        // Get all active flats in the building
+        List<Flat> activeFlats = flatRepository.findByApartmentBuildingIdAndIsActiveTrue(buildingId);
+        
+        if (activeFlats.isEmpty()) {
+            log.warn("No active flats found for building ID: {}", buildingId);
+            return Collections.emptyList();
+        }
+        
+        List<MonthlyDue> createdDues = new ArrayList<>();
+        int skippedCount = 0;
+        int noRentCount = 0;
+        int usingFallbackCount = 0;
+        
+        for (Flat flat : activeFlats) {
+            try {
+                // Determine amount based on generation mode
+                BigDecimal amountToUse = determineAmountForFlat(
+                    flat, 
+                    useFlatsMonthlyRent, 
+                    dueAmount, 
+                    fallbackAmount
+                );
+                
+                // Track statistics for rent-based mode
+                if (useFlatsMonthlyRent && 
+                    (flat.getMonthlyRent() == null || 
+                     flat.getMonthlyRent().compareTo(BigDecimal.ZERO) <= 0)) {
+                    noRentCount++;
+                    if (fallbackAmount != null && fallbackAmount.compareTo(BigDecimal.ZERO) > 0) {
+                        usingFallbackCount++;
+                    }
+                    log.debug("Flat {} has no rent set, using {} amount: {}", 
+                             flat.getFlatNumber(),
+                             usingFallbackCount == noRentCount ? "fallback" : "ultimate fallback",
+                             amountToUse);
+                }
+                
+                MonthlyDue monthlyDue = MonthlyDue.builder()
+                        .flat(flat)
+                        .dueAmount(amountToUse)
+                        .dueDate(dueDate)
+                        .dueDescription(description)
+                        .status(MonthlyDue.DueStatus.UNPAID)
+                        .paidAmount(BigDecimal.ZERO)
+                        .build();
+                
+                MonthlyDue savedDue = monthlyDueRepository.save(monthlyDue);
+                createdDues.add(savedDue);
+                
+            } catch (DataIntegrityViolationException e) {
+                // Due already exists for this flat and date (idempotency)
+                log.debug("Monthly due already exists for flat ID: {} and date: {}", 
+                        flat.getId(), dueDate);
+                skippedCount++;
+            }
+        }
+        
+        log.info("Generated {} monthly dues for building ID: {} | Mode: {} | " +
+                "Skipped: {} (duplicates) | No rent: {} | Using fallback: {} | Using ultimate fallback: {}", 
+                createdDues.size(), 
+                buildingId, 
+                useFlatsMonthlyRent ? "FLAT_RENT_BASED" : "UNIFORM",
+                skippedCount, 
+                noRentCount,
+                usingFallbackCount,
+                noRentCount - usingFallbackCount);
+        
+        // Publish event if dues were generated
+        if (!createdDues.isEmpty()) {
+            MonthlyDuesGeneratedEvent event = new MonthlyDuesGeneratedEvent(
+                this,
+                buildingId,
+                dueDate.getYear(),
+                dueDate.getMonthValue(),
+                createdDues.size(),
+                dueDate
+            );
+            eventPublisher.publishEvent(event);
+            log.debug("Published MonthlyDuesGeneratedEvent for building {}", buildingId);
+        }
+        
+        return createdDues;
+    }
+    
+    /**
+     * Determines the amount to charge for a specific flat based on generation mode.
+     * 
+     * @param flat The flat to determine amount for
+     * @param useFlatsMonthlyRent Whether to use flat's monthly rent
+     * @param dueAmount The uniform/ultimate fallback amount
+     * @param fallbackAmount The primary fallback amount (for rent-based mode)
+     * @return The determined amount to charge
+     */
+    private BigDecimal determineAmountForFlat(
+            Flat flat, 
+            boolean useFlatsMonthlyRent,
+            BigDecimal dueAmount, 
+            BigDecimal fallbackAmount) {
+        
+        if (!useFlatsMonthlyRent) {
+            // Uniform mode - simple case
+            return dueAmount;
+        }
+        
+        // Rent-based mode - check flat's monthly rent first
+        if (flat.getMonthlyRent() != null && 
+            flat.getMonthlyRent().compareTo(BigDecimal.ZERO) > 0) {
+            return flat.getMonthlyRent();
+        }
+        
+        // Flat has no valid rent - use fallback chain
+        if (fallbackAmount != null && fallbackAmount.compareTo(BigDecimal.ZERO) > 0) {
+            return fallbackAmount;
+        }
+        
+        // Ultimate fallback to dueAmount (which was validated to exist)
+        return dueAmount;
     }
     
     /**
@@ -349,5 +504,24 @@ public class MonthlyDueService implements IMonthlyDueService {
                 .count();
         
         return (double) paidCount / dues.size() * 100.0;
+    }
+
+    /**
+     * Retrieves all monthly dues for a building.
+     * Returns all dues regardless of status, sorted by flat number and due date.
+     * 
+     * @param buildingId the building ID
+     * @return list of all monthly dues for the building
+     */
+    @Transactional(readOnly = true)
+    @Override
+    public List<MonthlyDue> getAllMonthlyDuesForBuilding(Long buildingId) {
+        log.info("Retrieving all monthly dues for building ID: {}", buildingId);
+        
+        // Use a wide date range to get all dues
+        LocalDate startDate = LocalDate.of(2020, 1, 1); // Far past date
+        LocalDate endDate = LocalDate.now().plusYears(1); // Future date
+        
+        return monthlyDueRepository.findByBuildingAndDateRange(buildingId, startDate, endDate);
     }
 }

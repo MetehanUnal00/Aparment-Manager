@@ -12,7 +12,7 @@ import { LoadingService } from '../../../core/services/loading.service';
 
 // Models
 import { ApartmentBuildingResponse } from '../../../shared/models/apartment-building.model';
-import { MonthlyDueResponse, DueStatus, DebtorInfo } from '../../../shared/models/monthly-due.model';
+import { MonthlyDueResponse, DueStatus, DebtorInfo, MonthlyDueRequest } from '../../../shared/models/monthly-due.model';
 
 // Shared Components
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
@@ -54,11 +54,13 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
   // Component state
   buildings: ApartmentBuildingResponse[] = [];
   selectedBuildingId: number | null = null;
+  allDues: MonthlyDueResponse[] = [];
   overdueDues: MonthlyDueResponse[] = [];
   debtorReport: DebtorInfo[] = [];
   
   // Filters
   showDebtorsOnly = false;
+  showOverdueOnly = false;
   sortBy: 'dueDate' | 'amount' | 'flat' = 'dueDate';
   sortDirection: 'asc' | 'desc' = 'desc';
   
@@ -73,6 +75,8 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
   generateYear = new Date().getFullYear();
   generateAmount = 0;
   generateDescription = '';
+  generateMode: 'uniform' | 'rentBased' = 'uniform';
+  fallbackAmount: number | null = null;
   
   // Pagination
   currentPage = 1;
@@ -119,34 +123,30 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
   loadMonthlyDues(): void {
     if (!this.selectedBuildingId) return;
 
-    // Load overdue dues
-    this.monthlyDueService.getOverdueDues(this.selectedBuildingId)
+    // Load all dues
+    this.monthlyDueService.getAllDuesForBuilding(this.selectedBuildingId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (overdue) => {
-          // Map OverdueSummary to MonthlyDueResponse for display
-          this.overdueDues = overdue.map(due => ({
-            id: due.dueId,
-            flat: {
-              id: due.flatId,
-              flatNumber: due.flatNumber,
-              tenantName: due.tenantName
-            },
-            dueAmount: due.dueAmount,
-            dueDate: due.dueDate,
-            status: DueStatus.OVERDUE,
-            dueDescription: due.description,
-            isOverdue: true,
-            createdAt: '',
-            updatedAt: ''
-          } as MonthlyDueResponse));
+        next: (dues) => {
+          this.allDues = dues;
           
-          this.totalOverdue = overdue.length;
+          // Filter overdue dues
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          this.overdueDues = dues.filter(due => {
+            const dueDate = new Date(due.dueDate);
+            return due.status !== DueStatus.PAID && 
+                   due.status !== DueStatus.CANCELLED && 
+                   dueDate < today;
+          });
+          
+          this.totalOverdue = this.overdueDues.length;
           this.updateStatistics();
         },
         error: (error) => {
-          console.error('Error loading overdue dues:', error);
-          this.notification.error('Failed to load overdue payments');
+          console.error('Error loading monthly dues:', error);
+          this.notification.error('Failed to load monthly dues');
         }
       });
 
@@ -182,7 +182,10 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
    */
   private updateStatistics(): void {
     if (!this.showDebtorsOnly) {
-      this.totalDebt = this.overdueDues.reduce((sum, due) => sum + due.dueAmount, 0);
+      const duesToCalculate = this.showOverdueOnly ? this.overdueDues : this.allDues;
+      this.totalDebt = duesToCalculate
+        .filter(due => due.status !== DueStatus.PAID && due.status !== DueStatus.CANCELLED)
+        .reduce((sum, due) => sum + due.dueAmount, 0);
     }
   }
 
@@ -204,8 +207,17 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
     if (this.showDebtorsOnly) {
       this.loadDebtorReport();
     } else {
-      this.loadMonthlyDues();
+      this.updateStatistics();
     }
+  }
+
+  /**
+   * Toggle between all dues and overdue only
+   */
+  toggleOverdueFilter(): void {
+    this.showOverdueOnly = !this.showOverdueOnly;
+    this.currentPage = 1;
+    this.updateStatistics();
   }
 
   /**
@@ -221,7 +233,8 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
 
     // Apply sorting
     if (!this.showDebtorsOnly) {
-      this.overdueDues.sort((a, b) => {
+      const duesToSort = this.showOverdueOnly ? this.overdueDues : this.allDues;
+      duesToSort.sort((a, b) => {
         let comparison = 0;
         
         switch (column) {
@@ -263,7 +276,6 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
    * Show generate monthly dues dialog
    */
   showGenerateMonthlyDues(): void {
-    console.log('showGenerateMonthlyDues called');
     if (!this.selectedBuildingId) {
       this.notification.warning('Please select a building first');
       return;
@@ -271,39 +283,86 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
 
     // Set default values
     const today = new Date();
-    this.generateMonth = today.getMonth() + 1;
-    this.generateYear = today.getFullYear();
+    // For June (month 6), getMonth() returns 5, so we add 1
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
+    
+    // Default to next month if we're past the 1st of current month
+    if (today.getDate() > 1) {
+      if (currentMonth === 12) {
+        this.generateMonth = 1;
+        this.generateYear = currentYear + 1;
+      } else {
+        this.generateMonth = currentMonth + 1;
+        this.generateYear = currentYear;
+      }
+    } else {
+      this.generateMonth = currentMonth;
+      this.generateYear = currentYear;
+    }
+    
+    console.log('Default month/year set to:', this.generateMonth, this.generateYear);
+    
+    // Reset generation mode
+    this.generateMode = 'uniform';
+    this.fallbackAmount = null;
     
     // Get default amount from first flat in the building (if available)
     const selectedBuilding = this.buildings.find(b => b.id === this.selectedBuildingId);
     if (selectedBuilding) {
-      // You might want to get this from the building's default settings
+      // Set a reasonable default amount
       this.generateAmount = 1000; // Default amount
     }
     
     this.generateDescription = `Monthly Rent - ${this.getMonthName(this.generateMonth)} ${this.generateYear}`;
     this.showGenerateDialog = true;
-    console.log('showGenerateDialog set to:', this.showGenerateDialog);
   }
 
   /**
    * Generate monthly dues for the building
    */
   generateMonthlyDues(): void {
-    if (!this.selectedBuildingId || !this.generateAmount) {
-      this.notification.error('Please fill in all required fields');
-      return;
+    // Validation based on mode
+    if (this.generateMode === 'uniform') {
+      if (!this.selectedBuildingId || !this.generateAmount) {
+        this.notification.error('Please fill in all required fields');
+        return;
+      }
+    } else {
+      // Rent-based mode - need at least one fallback
+      if (!this.selectedBuildingId || (!this.fallbackAmount && !this.generateAmount)) {
+        this.notification.error('Please provide at least one fallback amount for flats without rent');
+        return;
+      }
     }
 
-    // Calculate due date (1st of the selected month)
-    const dueDate = new Date(this.generateYear, this.generateMonth - 1, 1);
-    const dueDateStr = dueDate.toISOString().split('T')[0] + 'T00:00:00';
+    // Ensure month and year are numbers
+    const month = Number(this.generateMonth);
+    const year = Number(this.generateYear);
+    
+    console.log('Generating dues for:', { month, year, generateMonth: this.generateMonth, generateYear: this.generateYear });
 
-    const request = {
+    // Calculate due date (1st of the selected month)
+    const dueDate = new Date(year, month - 1, 1);
+    
+    // Ensure the date is not in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dueDate < today) {
+      this.notification.error('Due date cannot be in the past. Please select a future month.');
+      return;
+    }
+    
+    const dueDateStr = dueDate.toISOString().split('T')[0] + 'T00:00:00';
+    console.log('Due date string:', dueDateStr);
+
+    const request: MonthlyDueRequest = {
       buildingId: this.selectedBuildingId,
       dueAmount: this.generateAmount,
       dueDate: dueDateStr,
-      dueDescription: this.generateDescription
+      dueDescription: this.generateDescription,
+      useFlatsMonthlyRent: this.generateMode === 'rentBased',
+      fallbackAmount: this.generateMode === 'rentBased' && this.fallbackAmount !== null ? this.fallbackAmount : undefined
     };
 
     this.monthlyDueService.generateMonthlyDues(request)
@@ -319,6 +378,17 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
           this.notification.error('Failed to generate monthly dues');
         }
       });
+  }
+
+  /**
+   * Handle generation mode change
+   */
+  onGenerationModeChange(): void {
+    // Preserve the existing generateAmount value
+    // Clear fallback when switching to uniform mode
+    if (this.generateMode === 'uniform') {
+      this.fallbackAmount = null;
+    }
   }
 
   /**
@@ -372,7 +442,9 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
    * Get paginated items
    */
   get paginatedItems(): any[] {
-    const items = this.showDebtorsOnly ? this.debtorReport : this.overdueDues;
+    const items = this.showDebtorsOnly 
+      ? this.debtorReport 
+      : (this.showOverdueOnly ? this.overdueDues : this.allDues);
     const start = (this.currentPage - 1) * this.pageSize;
     const end = start + this.pageSize;
     return items.slice(start, end);
@@ -382,7 +454,9 @@ export class MonthlyDueListComponent implements OnInit, OnDestroy {
    * Get total pages
    */
   get totalPages(): number {
-    const items = this.showDebtorsOnly ? this.debtorReport : this.overdueDues;
+    const items = this.showDebtorsOnly 
+      ? this.debtorReport 
+      : (this.showOverdueOnly ? this.overdueDues : this.allDues);
     return Math.ceil(items.length / this.pageSize);
   }
 

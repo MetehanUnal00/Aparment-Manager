@@ -235,7 +235,7 @@ public interface MonthlyDueRepository extends JpaRepository<MonthlyDue, Long> {
      * @return List of monthly dues
      */
     @Query("SELECT md FROM MonthlyDue md " +
-           "JOIN md.flat f " +
+           "JOIN FETCH md.flat f " +
            "WHERE f.apartmentBuilding.id = :buildingId " +
            "AND md.dueDate >= :startDate " +
            "AND md.dueDate <= :endDate " +

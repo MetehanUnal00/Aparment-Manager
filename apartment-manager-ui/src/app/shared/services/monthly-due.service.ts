@@ -57,6 +57,18 @@ export class MonthlyDueService {
   }
 
   /**
+   * Get all monthly dues for a building
+   * @param buildingId The building ID
+   */
+  getAllDuesForBuilding(buildingId: number): Observable<MonthlyDueResponse[]> {
+    const url = `${this.baseUrl}/building/${buildingId}`;
+    
+    return this.api.get<MonthlyDueResponse[]>(url).pipe(
+      tap(dues => console.log(`Fetched ${dues.length} monthly dues for building ${buildingId}`))
+    );
+  }
+
+  /**
    * Get overdue payments for a building
    * @param buildingId The building ID
    * @param enablePolling Enable auto-refresh every 30 seconds

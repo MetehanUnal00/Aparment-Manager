@@ -27,6 +27,20 @@ public interface IMonthlyDueService {
     List<MonthlyDue> generateMonthlyDuesForBuilding(Long buildingId, BigDecimal dueAmount, LocalDate dueDate, String description);
 
     /**
+     * Enhanced method that generates monthly dues with support for using each flat's monthly rent.
+     * Provides flexibility between uniform amount and individual flat rents with fallback options.
+     * 
+     * @param buildingId the building ID
+     * @param dueAmount the amount due per flat (or ultimate fallback in rent-based mode)
+     * @param dueDate the due date for payment
+     * @param description optional description for the dues
+     * @param useFlatsMonthlyRent whether to use each flat's monthly rent instead of uniform amount
+     * @param fallbackAmount primary fallback for flats without rent (only used when useFlatsMonthlyRent=true)
+     * @return list of created monthly due entries
+     */
+    List<MonthlyDue> generateMonthlyDuesForBuilding(Long buildingId, BigDecimal dueAmount, LocalDate dueDate, String description, boolean useFlatsMonthlyRent, BigDecimal fallbackAmount);
+
+    /**
      * Automatically generates monthly dues for all buildings.
      * Scheduled to run on the 1st of each month.
      */
@@ -112,4 +126,12 @@ public interface IMonthlyDueService {
      * @return collection rate as a percentage (0-100)
      */
     double getCollectionRate(Long buildingId, LocalDate startDate, LocalDate endDate);
+
+    /**
+     * Retrieves all monthly dues for a building.
+     * 
+     * @param buildingId the building ID
+     * @return list of all monthly dues for the building
+     */
+    List<MonthlyDue> getAllMonthlyDuesForBuilding(Long buildingId);
 }
