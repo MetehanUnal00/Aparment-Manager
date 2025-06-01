@@ -19,8 +19,9 @@ export enum PaymentMethod {
 
 /**
  * Flat summary for payment response
+ * Used specifically in payment response to include building info
  */
-export interface FlatSummary {
+export interface PaymentFlatSummary {
   id: number;
   flatNumber: string;
   tenantName?: string;
@@ -33,7 +34,7 @@ export interface FlatSummary {
  */
 export interface PaymentResponse {
   id: number;
-  flat: FlatSummary;
+  flat: PaymentFlatSummary;
   amount: number;
   paymentDate: string;
   paymentMethod: PaymentMethod;

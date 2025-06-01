@@ -27,6 +27,13 @@ $card-bg-dark: #1a1d29;
 $border-subtle: #2c2e33;
 $hover-overlay: rgba(255, 255, 255, 0.1);
 
+// Breakpoint variables
+$breakpoint-xs: 576px;
+$breakpoint-sm: 768px;
+$breakpoint-md: 992px;
+$breakpoint-lg: 1200px;
+$breakpoint-xl: 1400px;
+
 // Override Bootstrap theme colors
 $primary: $electric-blue;
 $secondary: $warm-gray;

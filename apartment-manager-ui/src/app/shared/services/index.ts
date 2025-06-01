@@ -6,3 +6,4 @@ export * from './expense.service';
 export * from './flat.service';
 export * from './monthly-due.service';
 export * from './payment.service';
+export * from './contract.service';

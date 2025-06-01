@@ -38,8 +38,9 @@ export enum RecurrenceFrequency {
 
 /**
  * Building summary for expense response
+ * Used specifically in expense response
  */
-export interface BuildingSummary {
+export interface ExpenseBuildingSummary {
   id: number;
   name: string;
   address: string;
@@ -50,7 +51,7 @@ export interface BuildingSummary {
  */
 export interface ExpenseResponse {
   id: number;
-  building: BuildingSummary;
+  building: ExpenseBuildingSummary;
   category: ExpenseCategory;
   categoryDisplayName: string;
   amount: number;

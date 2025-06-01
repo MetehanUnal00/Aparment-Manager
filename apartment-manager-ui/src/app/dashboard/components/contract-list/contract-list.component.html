@@ -1,0 +1,332 @@
+<div class="contract-list-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <h2 class="page-title">Contracts</h2>
+      <span class="contract-count" *ngIf="(contracts$ | async) as contracts">
+        {{ contracts.totalElements }} total contracts
+      </span>
+    </div>
+    <div class="header-actions">
+      <app-button
+        *ngIf="canManageContracts"
+        variant="primary"
+        (click)="createContract()"
+        [icon]="'add'"
+      >
+        New Contract
+      </app-button>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-section">
+    <app-search-box
+      placeholder="Search by tenant name..."
+      (search)="onSearch($event)"
+    ></app-search-box>
+    <app-button
+      variant="secondary"
+      size="sm"
+      [icon]="showFilters ? 'filter_list_off' : 'filter_list'"
+      (click)="toggleFilters()"
+    >
+      {{ showFilters ? 'Hide' : 'Show' }} Filters
+    </app-button>
+  </div>
+
+  <!-- Filters Panel -->
+  <div class="filters-panel" *ngIf="showFilters">
+    <form [formGroup]="filterForm" class="filter-form">
+      <div class="filter-row">
+        <!-- Building Filter -->
+        <div class="filter-item">
+          <label>Building</label>
+          <select formControlName="buildingId" class="form-control">
+            <option [value]="null">All Buildings</option>
+            <option 
+              *ngFor="let building of buildings$ | async" 
+              [value]="building.id"
+            >
+              {{ building.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="filter-item">
+          <label>Status</label>
+          <select formControlName="status" class="form-control">
+            <option [value]="null">All Statuses</option>
+            <option *ngFor="let status of contractStatuses" [value]="status">
+              {{ status }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Expiring Soon Filter -->
+        <div class="filter-item">
+          <label>Expiring Within</label>
+          <select formControlName="expiringWithinDays" class="form-control">
+            <option [value]="null">Any Time</option>
+            <option [value]="7">7 Days</option>
+            <option [value]="14">14 Days</option>
+            <option [value]="30">30 Days</option>
+            <option [value]="60">60 Days</option>
+          </select>
+        </div>
+
+        <!-- Overdue Filter -->
+        <div class="filter-item checkbox-filter">
+          <label class="checkbox-label">
+            <input 
+              type="checkbox" 
+              formControlName="hasOverdueDues"
+              class="checkbox"
+            >
+            <span>Has Overdue Payments</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <app-button
+          variant="link"
+          size="sm"
+          (click)="clearFilters()"
+        >
+          Clear Filters
+        </app-button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Loading State -->
+  <app-loading-spinner *ngIf="loading$ | async"></app-loading-spinner>
+
+  <!-- Error State -->
+  <div class="error-message" *ngIf="error$ | async as error">
+    <span class="material-icons">error</span>
+    {{ error }}
+  </div>
+
+  <!-- Contracts Table -->
+  <div class="table-container" *ngIf="!(loading$ | async) && (contracts$ | async) as contracts">
+    <!-- Empty State -->
+    <app-empty-state
+      *ngIf="contracts.content.length === 0"
+      icon="description"
+      title="No contracts found"
+      [message]="getEmptyStateMessage()"
+    >
+      <app-button
+        *ngIf="canManageContracts && !filterForm.dirty"
+        variant="primary"
+        (click)="createContract()"
+      >
+        Create Contract
+      </app-button>
+    </app-empty-state>
+
+    <!-- Data Table -->
+    <table 
+      class="data-table" 
+      *ngIf="contracts.content.length > 0"
+      appResponsiveTable
+    >
+      <thead>
+        <tr>
+          <th>Flat</th>
+          <th>Tenant</th>
+          <th>Period</th>
+          <th>Monthly Rent</th>
+          <th>Status</th>
+          <th>Balance</th>
+          <th class="actions-column">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr 
+          *ngFor="let contract of contracts.content; trackBy: trackByContractId"
+          [class]="getRowClass(contract)"
+        >
+          <!-- Flat Number -->
+          <td data-label="Flat">
+            <div class="flat-info">
+              <span class="flat-number">{{ contract.flatNumber }}</span>
+              <span class="building-name">{{ contract.buildingName }}</span>
+            </div>
+          </td>
+
+          <!-- Tenant Name -->
+          <td data-label="Tenant">
+            {{ contract.tenantName }}
+          </td>
+
+          <!-- Contract Period -->
+          <td data-label="Period">
+            <div class="period-info">
+              <span class="period-dates">
+                {{ formatPeriod(contract.startDate, contract.endDate) }}
+              </span>
+              <span class="period-length" *ngIf="contract.contractLengthInMonths">
+                ({{ contract.contractLengthInMonths }} months)
+              </span>
+              <!-- Expiry Badge -->
+              <span 
+                *ngIf="getExpiryBadge(contract) as expiryText"
+                [class]="getExpiryBadgeClass(contract)"
+              >
+                {{ expiryText }}
+              </span>
+            </div>
+          </td>
+
+          <!-- Monthly Rent -->
+          <td data-label="Monthly Rent" class="amount">
+            {{ contract.monthlyRent | currencyFormat }}
+          </td>
+
+          <!-- Status -->
+          <td data-label="Status">
+            <span [class]="getStatusBadgeClass(contract.status)">
+              {{ contract.status }}
+            </span>
+          </td>
+
+          <!-- Balance -->
+          <td data-label="Balance" class="amount">
+            <span 
+              [class.text-danger]="contract.outstandingBalance && contract.outstandingBalance > 0"
+              [class.text-success]="!contract.outstandingBalance || contract.outstandingBalance === 0"
+            >
+              {{ contract.outstandingBalance || 0 | currencyFormat }}
+            </span>
+            <span class="overdue-indicator" *ngIf="contract.hasOverdueDues">
+              <span class="material-icons">warning</span>
+              Overdue
+            </span>
+          </td>
+
+          <!-- Actions -->
+          <td data-label="Actions" class="actions-column">
+            <div class="action-buttons">
+              <!-- View Details -->
+              <app-button
+                variant="link"
+                size="sm"
+                [icon]="'visibility'"
+                (click)="viewContract(contract.id)"
+                title="View Details"
+              >
+                View
+              </app-button>
+
+              <!-- Renew -->
+              <app-button
+                *ngIf="canRenew(contract)"
+                variant="link"
+                size="sm"
+                [icon]="'autorenew'"
+                (click)="renewContract(contract)"
+                title="Renew Contract"
+              >
+                Renew
+              </app-button>
+
+              <!-- Modify -->
+              <app-button
+                *ngIf="canModify(contract)"
+                variant="link"
+                size="sm"
+                [icon]="'edit'"
+                (click)="modifyContract(contract)"
+                title="Modify Contract"
+              >
+                Modify
+              </app-button>
+
+              <!-- Cancel -->
+              <app-button
+                *ngIf="canCancel(contract)"
+                variant="link"
+                size="sm"
+                [icon]="'cancel'"
+                (click)="cancelContract(contract)"
+                title="Cancel Contract"
+                class="danger-action"
+              >
+                Cancel
+              </app-button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <div class="pagination-container" *ngIf="contracts.totalPages > 1">
+      <div class="pagination-info">
+        Showing {{ contracts.number * contracts.size + 1 }} - 
+        {{ Math.min((contracts.number + 1) * contracts.size, contracts.totalElements) }} 
+        of {{ contracts.totalElements }} contracts
+      </div>
+      
+      <div class="pagination-controls">
+        <app-button
+          variant="secondary"
+          size="sm"
+          [disabled]="contracts.first"
+          (click)="onPageChange(0)"
+          [icon]="'first_page'"
+        >
+        </app-button>
+        
+        <app-button
+          variant="secondary"
+          size="sm"
+          [disabled]="contracts.first"
+          (click)="onPageChange(contracts.number - 1)"
+          [icon]="'chevron_left'"
+        >
+        </app-button>
+        
+        <span class="page-numbers">
+          Page {{ contracts.number + 1 }} of {{ contracts.totalPages }}
+        </span>
+        
+        <app-button
+          variant="secondary"
+          size="sm"
+          [disabled]="contracts.last"
+          (click)="onPageChange(contracts.number + 1)"
+          [icon]="'chevron_right'"
+        >
+        </app-button>
+        
+        <app-button
+          variant="secondary"
+          size="sm"
+          [disabled]="contracts.last"
+          (click)="onPageChange(contracts.totalPages - 1)"
+          [icon]="'last_page'"
+        >
+        </app-button>
+      </div>
+
+      <div class="page-size-selector">
+        <label>Show:</label>
+        <select 
+          [value]="pageSize" 
+          (change)="onPageSizeChange(+($any($event.target).value))"
+          class="form-control"
+        >
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>

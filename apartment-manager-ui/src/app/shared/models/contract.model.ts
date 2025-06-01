@@ -3,7 +3,7 @@
  * These models correspond to the backend contract entities and DTOs
  */
 
-import { PageRequest, PageResponse } from './common.model';
+import { PaginationParams, PaginatedResponse } from './common.model';
 
 /**
  * Contract status enumeration
@@ -251,7 +251,7 @@ export interface DuePreview {
 /**
  * Contract search/filter parameters
  */
-export interface ContractSearchParams extends PageRequest {
+export interface ContractSearchParams extends PaginationParams {
   buildingId?: number;
   status?: ContractStatus;
   tenantName?: string;
@@ -271,7 +271,12 @@ export function isContractActive(contract: ContractResponse | ContractSummaryRes
  * Type guard to check if a contract is currently active (using backend field)
  */
 export function isCurrentlyActive(contract: ContractResponse | ContractSummaryResponse): boolean {
-  return 'isCurrentlyActive' in contract ? contract.isCurrentlyActive : contract.status === ContractStatus.ACTIVE;
+  // ContractSummaryResponse always has isCurrentlyActive
+  if ('isCurrentlyActive' in contract && contract.isCurrentlyActive !== undefined) {
+    return contract.isCurrentlyActive;
+  }
+  // Fall back to status check
+  return contract.status === ContractStatus.ACTIVE;
 }
 
 /**

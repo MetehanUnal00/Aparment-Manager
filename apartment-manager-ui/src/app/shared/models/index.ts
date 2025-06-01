@@ -14,3 +14,9 @@ export * from './monthly-due.model';
 export * from './expense.model';
 export * from './dashboard.model';
 export * from './contract.model';
+
+// Re-export specific interfaces to clarify which version to use
+export type { FlatSummary } from './flat.model';
+export type { PaymentFlatSummary } from './payment.model';
+export type { BuildingSummary } from './apartment-building.model';
+export type { ExpenseBuildingSummary } from './expense.model';
