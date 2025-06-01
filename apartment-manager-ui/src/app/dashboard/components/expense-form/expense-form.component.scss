@@ -1,0 +1,194 @@
+@import '../../../../styles.scss';
+
+.expense-form-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.form-header {
+  text-align: center;
+  
+  .page-title {
+    color: $pure-white;
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  p {
+    color: $warm-gray;
+    margin: 0;
+  }
+}
+
+.expense-form {
+  background: $card-bg-dark;
+  border: 1px solid $border-subtle;
+  border-radius: 0.5rem;
+  padding: 2rem;
+}
+
+.form-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-section {
+  .section-title {
+    color: $bright-cyan;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid $border-subtle;
+    display: flex;
+    align-items: center;
+    
+    i {
+      font-size: 1.5rem;
+    }
+  }
+}
+
+// Form Controls
+.form-label {
+  color: $pure-white;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  
+  .text-danger {
+    color: $danger-red;
+  }
+}
+
+.form-control,
+.form-select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid $border-subtle;
+  color: $pure-white;
+  
+  &:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: $electric-blue;
+    box-shadow: 0 0 0 0.2rem rgba(77, 171, 247, 0.25);
+    color: $pure-white;
+  }
+  
+  &::placeholder {
+    color: $warm-gray;
+    opacity: 0.7;
+  }
+  
+  &:disabled {
+    background: rgba(255, 255, 255, 0.02);
+    opacity: 0.6;
+  }
+}
+
+// Input Group
+.input-group-text {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid $border-subtle;
+  color: $bright-cyan;
+}
+
+// Textarea
+textarea.form-control {
+  resize: vertical;
+  min-height: 100px;
+}
+
+// Form Check
+.form-check-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid $border-subtle;
+  
+  &:checked {
+    background-color: $electric-blue;
+    border-color: $electric-blue;
+  }
+  
+  &:focus {
+    border-color: $electric-blue;
+    box-shadow: 0 0 0 0.2rem rgba(77, 171, 247, 0.25);
+  }
+}
+
+.form-check-label {
+  color: $pure-white;
+  margin-left: 0.25rem;
+}
+
+// Form Text
+.form-text {
+  color: $warm-gray;
+  font-size: 0.875rem;
+  
+  i {
+    color: $info-blue;
+  }
+}
+
+// Form Actions
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid $border-subtle;
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .expense-form-container {
+    margin: 1rem auto;
+  }
+  
+  .form-header {
+    .page-title {
+      font-size: 1.5rem;
+    }
+  }
+  
+  .expense-form {
+    padding: 1.5rem;
+  }
+  
+  .form-section {
+    .section-title {
+      font-size: 1.1rem;
+      
+      i {
+        font-size: 1.25rem;
+      }
+    }
+  }
+  
+  .form-actions {
+    flex-direction: column-reverse;
+    
+    app-button {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .expense-form-container {
+    padding: 0;
+  }
+  
+  .expense-form {
+    padding: 1rem;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+  
+  .form-sections {
+    gap: 1.5rem;
+  }
+}

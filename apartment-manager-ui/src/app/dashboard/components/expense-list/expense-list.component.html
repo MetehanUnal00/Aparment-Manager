@@ -1,0 +1,259 @@
+<div class="expense-list-container">
+  <!-- Header with title and actions -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title">Expenses</h2>
+    <app-button
+      variant="primary"
+      [icon]="'bi-plus-lg'"
+      (onClick)="createExpense()">
+      Add Expense
+    </app-button>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section mb-4">
+    <div class="row g-3">
+      <!-- Building Selector -->
+      <div class="col-md-4">
+        <label for="buildingSelect" class="form-label">Building <span class="text-danger">*</span></label>
+        <select
+          id="buildingSelect"
+          class="form-select"
+          [(ngModel)]="selectedBuildingId"
+          (ngModelChange)="onBuildingChange()">
+          <option [value]="null">Select a building...</option>
+          <option *ngFor="let building of buildings" [value]="building.id">
+            {{ building.name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="col-md-4">
+        <label for="categoryFilter" class="form-label">Category</label>
+        <select
+          id="categoryFilter"
+          class="form-select"
+          [(ngModel)]="selectedCategory"
+          (ngModelChange)="onFilterChange()">
+          <option [value]="null">All Categories</option>
+          <option *ngFor="let cat of categories" [value]="cat.value">
+            {{ cat.label }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Search Box -->
+      <div class="col-md-4">
+        <label class="form-label">Search</label>
+        <app-search-box
+          placeholder="Search by description, vendor, invoice..."
+          (search)="onSearch($event)">
+        </app-search-box>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-2">
+      <!-- Date Range -->
+      <div class="col-md-3">
+        <label for="startDate" class="form-label">From Date</label>
+        <input
+          type="date"
+          id="startDate"
+          class="form-control"
+          [(ngModel)]="startDate"
+          (ngModelChange)="onFilterChange()">
+      </div>
+
+      <div class="col-md-3">
+        <label for="endDate" class="form-label">To Date</label>
+        <input
+          type="date"
+          id="endDate"
+          class="form-control"
+          [(ngModel)]="endDate"
+          (ngModelChange)="onFilterChange()">
+      </div>
+
+      <!-- Recurring Filter -->
+      <div class="col-md-3">
+        <label class="form-label">&nbsp;</label>
+        <div class="form-check mt-2">
+          <input
+            type="checkbox"
+            id="recurringOnly"
+            class="form-check-input"
+            [(ngModel)]="showRecurringOnly"
+            (ngModelChange)="onFilterChange()">
+          <label class="form-check-label" for="recurringOnly">
+            Show recurring only
+          </label>
+        </div>
+      </div>
+
+      <!-- Clear Filters -->
+      <div class="col-md-3">
+        <label class="form-label">&nbsp;</label>
+        <app-button
+          variant="secondary"
+          [fullWidth]="true"
+          (onClick)="clearFilters()">
+          Clear Filters
+        </app-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <app-loading-spinner *ngIf="isLoading" [fullscreen]="false"></app-loading-spinner>
+
+  <!-- No Building Selected -->
+  <app-empty-state
+    *ngIf="!selectedBuildingId && !isLoading"
+    title="No Building Selected"
+    message="Please select a building to view expenses"
+    icon="bi-building">
+  </app-empty-state>
+
+  <!-- No Expenses -->
+  <app-empty-state
+    *ngIf="selectedBuildingId && !isLoading && expenses.length === 0"
+    title="No Expenses Found"
+    message="No expenses recorded for this building in the selected date range"
+    icon="bi-receipt-cutoff">
+    <app-button
+      variant="primary"
+      [icon]="'bi-plus-lg'"
+      (onClick)="createExpense()">
+      Add First Expense
+    </app-button>
+  </app-empty-state>
+
+  <!-- No Search Results -->
+  <app-empty-state
+    *ngIf="selectedBuildingId && !isLoading && expenses.length > 0 && filteredExpenses.length === 0"
+    title="No Results Found"
+    message="No expenses match your search criteria"
+    icon="bi-search">
+    <app-button
+      variant="secondary"
+      (onClick)="clearFilters()">
+      Clear Filters
+    </app-button>
+  </app-empty-state>
+
+  <!-- Expenses Table -->
+  <div *ngIf="selectedBuildingId && !isLoading && filteredExpenses.length > 0" class="expenses-table-wrapper">
+    <div class="table-responsive">
+      <table class="table table-hover expenses-table">
+        <thead>
+          <tr>
+            <th (click)="sortBy('expenseDate')" class="sortable">
+              Date
+              <i class="bi ms-1" [ngClass]="getSortClass('expenseDate')"></i>
+            </th>
+            <th (click)="sortBy('category')" class="sortable">
+              Category
+              <i class="bi ms-1" [ngClass]="getSortClass('category')"></i>
+            </th>
+            <th>Description</th>
+            <th (click)="sortBy('vendorName')" class="sortable">
+              Vendor
+              <i class="bi ms-1" [ngClass]="getSortClass('vendorName')"></i>
+            </th>
+            <th (click)="sortBy('amount')" class="sortable text-end">
+              Amount
+              <i class="bi ms-1" [ngClass]="getSortClass('amount')"></i>
+            </th>
+            <th>Type</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let expense of paginatedExpenses" (click)="editExpense(expense)" class="clickable-row">
+            <td>{{ expense.expenseDate | date:'MMM d, yyyy' }}</td>
+            <td>
+              <span class="category-badge">
+                <i [class]="getCategoryIcon(expense.category) + ' me-1'"></i>
+                {{ expense.categoryDisplayName }}
+              </span>
+            </td>
+            <td>
+              <div class="description-cell">
+                <div class="description-text">{{ expense.description }}</div>
+                <small *ngIf="expense.invoiceNumber" class="text-muted">
+                  Invoice: {{ expense.invoiceNumber }}
+                </small>
+              </div>
+            </td>
+            <td>{{ expense.vendorName || '-' }}</td>
+            <td class="text-end fw-bold">{{ expense.amount | currencyFormat }}</td>
+            <td>
+              <span *ngIf="expense.isRecurring" class="badge bg-info">
+                <i class="bi bi-arrow-repeat me-1"></i>
+                {{ getRecurrenceLabel(expense.recurrenceFrequency) }}
+              </span>
+              <span *ngIf="!expense.isRecurring" class="text-muted">One-time</span>
+            </td>
+            <td class="text-center" (click)="$event.stopPropagation()">
+              <div class="btn-group btn-group-sm">
+                <button
+                  type="button"
+                  class="btn btn-outline-primary"
+                  title="Edit"
+                  (click)="editExpense(expense)">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-danger"
+                  title="Delete"
+                  (click)="confirmDelete(expense, $event)">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="summary-row">
+            <td colspan="4" class="text-end fw-bold">Total:</td>
+            <td class="text-end fw-bold">{{ totalAmount | currencyFormat }}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <nav *ngIf="totalPages > 1" aria-label="Expenses pagination">
+      <ul class="pagination justify-content-center">
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <a class="page-link" (click)="changePage(currentPage - 1)" tabindex="-1">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        <li class="page-item" [class.active]="currentPage === page" 
+            *ngFor="let page of [].constructor(totalPages); let i = index">
+          <a class="page-link" (click)="changePage(i + 1)">{{ i + 1 }}</a>
+        </li>
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <a class="page-link" (click)="changePage(currentPage + 1)">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- Delete Confirmation Dialog -->
+  <app-confirm-dialog
+    *ngIf="showDeleteDialog"
+    title="Delete Expense"
+    [message]="'Are you sure you want to delete this expense for ' + (expenseToDelete?.categoryDisplayName || '') + ' (' + (expenseToDelete?.amount | currencyFormat) + ')? This action cannot be undone.'"
+    confirmText="Delete"
+    confirmClass="btn-danger"
+    (confirm)="deleteExpense()"
+    (cancel)="showDeleteDialog = false">
+  </app-confirm-dialog>
+</div>

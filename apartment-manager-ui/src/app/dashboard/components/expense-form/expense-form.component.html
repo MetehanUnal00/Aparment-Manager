@@ -1,0 +1,258 @@
+<div class="expense-form-container">
+  <!-- Header -->
+  <div class="form-header mb-4">
+    <h2 class="page-title">{{ isEditMode ? 'Edit Expense' : 'Add New Expense' }}</h2>
+    <p class="text-muted">Record building expenses for tracking and reporting</p>
+  </div>
+
+  <!-- Loading State -->
+  <app-loading-spinner *ngIf="isLoading" [fullscreen]="false"></app-loading-spinner>
+
+  <!-- Form -->
+  <form #expenseForm="ngForm" (ngSubmit)="onSubmit(expenseForm)" *ngIf="!isLoading" class="expense-form">
+    <div class="form-sections">
+      
+      <!-- Basic Information Section -->
+      <div class="form-section">
+        <h3 class="section-title">
+          <i class="bi bi-info-circle me-2"></i>
+          Basic Information
+        </h3>
+        
+        <div class="row g-3">
+          <!-- Building Selection -->
+          <div class="col-md-6">
+            <label for="building" class="form-label">
+              Building <span class="text-danger">*</span>
+            </label>
+            <select
+              id="building"
+              name="buildingId"
+              class="form-select"
+              [(ngModel)]="expense.buildingId"
+              required
+              #buildingField="ngModel"
+              [disabled]="isEditMode">
+              <option [value]="0">Select a building...</option>
+              <option *ngFor="let building of buildings" [value]="building.id">
+                {{ building.name }} - {{ building.address }}
+              </option>
+            </select>
+            <app-form-errors [errors]="buildingField.errors" [showErrors]="!!(buildingField.touched && buildingField.invalid)" fieldName="Building"></app-form-errors>
+          </div>
+
+          <!-- Category -->
+          <div class="col-md-6">
+            <label for="category" class="form-label">
+              Category <span class="text-danger">*</span>
+            </label>
+            <select
+              id="category"
+              name="category"
+              class="form-select"
+              [(ngModel)]="expense.category"
+              required
+              #categoryField="ngModel">
+              <option *ngFor="let cat of categories" [value]="cat.value">
+                {{ cat.label }}
+              </option>
+            </select>
+            <small class="form-text text-muted">
+              {{ getCategoryHelp(expense.category) }}
+            </small>
+            <app-form-errors [errors]="categoryField.errors" [showErrors]="!!(categoryField.touched && categoryField.invalid)" fieldName="Category"></app-form-errors>
+          </div>
+
+          <!-- Amount -->
+          <div class="col-md-6">
+            <label for="amount" class="form-label">
+              Amount <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input
+                type="number"
+                id="amount"
+                name="amount"
+                class="form-control"
+                [(ngModel)]="expense.amount"
+                required
+                min="0.01"
+                step="0.01"
+                #amountField="ngModel"
+                placeholder="0.00">
+            </div>
+            <app-form-errors [errors]="amountField.errors" [showErrors]="!!(amountField.touched && amountField.invalid)" fieldName="Amount"></app-form-errors>
+          </div>
+
+          <!-- Expense Date -->
+          <div class="col-md-6">
+            <label for="expenseDate" class="form-label">
+              Expense Date <span class="text-danger">*</span>
+            </label>
+            <input
+              type="date"
+              id="expenseDate"
+              name="expenseDate"
+              class="form-control"
+              [(ngModel)]="expense.expenseDate"
+              required
+              [max]="maxDate"
+              #dateField="ngModel">
+            <app-form-errors [errors]="dateField.errors" [showErrors]="!!(dateField.touched && dateField.invalid)" fieldName="Date"></app-form-errors>
+          </div>
+
+          <!-- Description -->
+          <div class="col-12">
+            <label for="description" class="form-label">
+              Description <span class="text-danger">*</span>
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              class="form-control"
+              [(ngModel)]="expense.description"
+              required
+              minlength="3"
+              maxlength="500"
+              rows="3"
+              #descField="ngModel"
+              appAutofocus
+              placeholder="Enter a detailed description of the expense..."></textarea>
+            <div class="d-flex justify-content-between mt-1">
+              <app-form-errors [errors]="descField.errors" [showErrors]="!!(descField.touched && descField.invalid)" fieldName="Description"></app-form-errors>
+              <small class="text-muted">{{ expense.description.length }}/500</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vendor Information Section -->
+      <div class="form-section">
+        <h3 class="section-title">
+          <i class="bi bi-shop me-2"></i>
+          Vendor Information
+        </h3>
+        
+        <div class="row g-3">
+          <!-- Vendor Name -->
+          <div class="col-md-6">
+            <label for="vendorName" class="form-label">Vendor Name</label>
+            <input
+              type="text"
+              id="vendorName"
+              name="vendorName"
+              class="form-control"
+              [(ngModel)]="expense.vendorName"
+              maxlength="100"
+              placeholder="Company or person name">
+          </div>
+
+          <!-- Invoice Number -->
+          <div class="col-md-6">
+            <label for="invoiceNumber" class="form-label">Invoice Number</label>
+            <input
+              type="text"
+              id="invoiceNumber"
+              name="invoiceNumber"
+              class="form-control"
+              [(ngModel)]="expense.invoiceNumber"
+              maxlength="50"
+              placeholder="INV-2024-001">
+          </div>
+        </div>
+      </div>
+
+      <!-- Recurring Expense Section -->
+      <div class="form-section">
+        <h3 class="section-title">
+          <i class="bi bi-arrow-repeat me-2"></i>
+          Recurring Expense
+        </h3>
+        
+        <div class="row g-3">
+          <!-- Is Recurring -->
+          <div class="col-12">
+            <div class="form-check">
+              <input
+                type="checkbox"
+                id="isRecurring"
+                name="isRecurring"
+                class="form-check-input"
+                [(ngModel)]="expense.isRecurring"
+                (ngModelChange)="onRecurringChange()">
+              <label class="form-check-label" for="isRecurring">
+                This is a recurring expense
+              </label>
+            </div>
+          </div>
+
+          <!-- Recurrence Frequency -->
+          <div class="col-md-6" *ngIf="expense.isRecurring">
+            <label for="recurrenceFrequency" class="form-label">
+              Frequency <span class="text-danger">*</span>
+            </label>
+            <select
+              id="recurrenceFrequency"
+              name="recurrenceFrequency"
+              class="form-select"
+              [(ngModel)]="expense.recurrenceFrequency"
+              [required]="expense.isRecurring"
+              #freqField="ngModel">
+              <option *ngFor="let freq of recurrenceOptions" [value]="freq.value">
+                {{ freq.label }}
+              </option>
+            </select>
+            <app-form-errors [errors]="freqField.errors" [showErrors]="!!(freqField.touched && freqField.invalid)" fieldName="Frequency"></app-form-errors>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribution Options Section -->
+      <div class="form-section">
+        <h3 class="section-title">
+          <i class="bi bi-diagram-3 me-2"></i>
+          Distribution Options
+        </h3>
+        
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="form-check">
+              <input
+                type="checkbox"
+                id="distributeToFlats"
+                name="distributeToFlats"
+                class="form-check-input"
+                [(ngModel)]="expense.distributeToFlats">
+              <label class="form-check-label" for="distributeToFlats">
+                Distribute this expense equally among all active flats
+              </label>
+              <div class="form-text text-muted mt-1">
+                <i class="bi bi-info-circle me-1"></i>
+                When enabled, monthly dues will be created for each active flat with their share of this expense.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <app-button
+        variant="secondary"
+        type="button"
+        (onClick)="cancel()">
+        Cancel
+      </app-button>
+      <app-button
+        variant="primary"
+        type="submit"
+        [disabled]="expenseForm.invalid || isSubmitting"
+        [loading]="isSubmitting">
+        {{ isEditMode ? 'Update Expense' : 'Create Expense' }}
+      </app-button>
+    </div>
+  </form>
+</div>

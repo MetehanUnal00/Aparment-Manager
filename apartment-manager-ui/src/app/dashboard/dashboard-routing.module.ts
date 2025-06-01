@@ -9,6 +9,10 @@ import { FlatListComponent } from './components/flat-list/flat-list.component';
 import { FlatFormComponent } from './components/flat-form/flat-form.component';
 import { PaymentListComponent } from './components/payment-list/payment-list.component';
 import { PaymentFormComponent } from './components/payment-form/payment-form.component';
+import { ExpenseListComponent } from './components/expense-list/expense-list.component';
+import { ExpenseFormComponent } from './components/expense-form/expense-form.component';
+import { MonthlyDueListComponent } from './components/monthly-due-list/monthly-due-list.component';
+import { MonthlyDueFormComponent } from './components/monthly-due-form/monthly-due-form.component';
 
 const routes: Routes = [
   {
@@ -26,7 +30,13 @@ const routes: Routes = [
       { path: 'flats/:id/edit', component: FlatFormComponent },
       { path: 'payments', component: PaymentListComponent },
       { path: 'payments/new', component: PaymentFormComponent },
-      { path: 'payments/:id/edit', component: PaymentFormComponent }
+      { path: 'payments/:id/edit', component: PaymentFormComponent },
+      { path: 'expenses', component: ExpenseListComponent },
+      { path: 'expenses/new', component: ExpenseFormComponent },
+      { path: 'expenses/:id/edit', component: ExpenseFormComponent },
+      { path: 'monthly-dues', component: MonthlyDueListComponent },
+      { path: 'monthly-dues/new', component: MonthlyDueFormComponent },
+      { path: 'monthly-dues/:id/edit', component: MonthlyDueFormComponent }
     ]
   }
 ];

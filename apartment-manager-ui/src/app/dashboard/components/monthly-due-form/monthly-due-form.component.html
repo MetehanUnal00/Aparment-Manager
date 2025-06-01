@@ -1,0 +1,215 @@
+<div class="monthly-due-form">
+  <!-- Header -->
+  <div class="page-header">
+    <h2>{{ formTitle }}</h2>
+    <a routerLink="/dashboard/monthly-dues" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-2"></i>Back to List
+    </a>
+  </div>
+
+  <!-- Loading state -->
+  <app-loading-spinner *ngIf="loading.isLoading$ | async"></app-loading-spinner>
+
+  <!-- Form -->
+  <form #dueForm="ngForm" (ngSubmit)="onSubmit()" *ngIf="!(loading.isLoading$ | async)">
+    <div class="form-sections">
+      <!-- Flat Selection Section -->
+      <div class="form-section">
+        <h4>Flat Selection</h4>
+        
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="building" class="form-label required">Building</label>
+            <select
+              id="building"
+              class="form-select"
+              [(ngModel)]="selectedBuildingId"
+              (ngModelChange)="onBuildingChange()"
+              name="building"
+              required
+              [disabled]="isEditMode"
+            >
+              <option [ngValue]="null">-- Select Building --</option>
+              <option *ngFor="let building of buildings" [ngValue]="building.id">
+                {{ building.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="flatId" class="form-label required">Flat</label>
+            <select
+              id="flatId"
+              class="form-select"
+              [(ngModel)]="due.flatId"
+              (ngModelChange)="onFlatChange()"
+              name="flatId"
+              required
+              [disabled]="!selectedBuildingId || isEditMode"
+              [class.is-invalid]="submitted && errors['flatId']"
+            >
+              <option [ngValue]="undefined">-- Select Flat --</option>
+              <option *ngFor="let flat of flats" [ngValue]="flat.id">
+                {{ getFlatDisplayName(flat) }}
+              </option>
+            </select>
+            <div class="text-danger small mt-1" *ngIf="errors['flatId']">{{ errors['flatId'] }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Due Information Section -->
+      <div class="form-section">
+        <h4>Due Information</h4>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="dueDate" class="form-label required">Due Date</label>
+            <input
+              type="date"
+              id="dueDate"
+              class="form-control"
+              [(ngModel)]="due.dueDate"
+              name="dueDate"
+              required
+              [min]="minDate"
+              [class.is-invalid]="submitted && errors['dueDate']"
+            >
+            <div class="text-danger small mt-1" *ngIf="errors['dueDate']">{{ errors['dueDate'] }}</div>
+            <small class="form-text text-muted">
+              Typically the 1st of the month
+            </small>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label for="dueDescription" class="form-label">Description</label>
+            <input
+              type="text"
+              id="dueDescription"
+              class="form-control"
+              [(ngModel)]="due.dueDescription"
+              name="dueDescription"
+              maxlength="500"
+              placeholder="e.g., Monthly Rent - January 2025"
+              appAutofocus
+              [class.is-invalid]="submitted && errors['dueDescription']"
+            >
+            <div class="text-danger small mt-1" *ngIf="errors['dueDescription']">{{ errors['dueDescription'] }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Details Section -->
+      <div class="form-section">
+        <h4>Financial Details</h4>
+
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="baseRent" class="form-label">Base Rent</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input
+                type="number"
+                id="baseRent"
+                class="form-control"
+                [(ngModel)]="due.baseRent"
+                (ngModelChange)="updateTotalAmount()"
+                name="baseRent"
+                min="0"
+                step="0.01"
+              >
+            </div>
+            <small class="form-text text-muted">
+              Monthly rent amount
+            </small>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <label for="additionalCharges" class="form-label">Additional Charges</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input
+                type="number"
+                id="additionalCharges"
+                class="form-control"
+                [(ngModel)]="due.additionalCharges"
+                (ngModelChange)="updateTotalAmount()"
+                name="additionalCharges"
+                min="0"
+                step="0.01"
+              >
+            </div>
+            <small class="form-text text-muted">
+              Utilities, maintenance, etc.
+            </small>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <label class="form-label">Total Due Amount</label>
+            <div class="total-amount">
+              ${{ due.dueAmount | number:'1.2-2' }}
+            </div>
+            <div class="is-invalid" *ngIf="submitted && errors['dueAmount']">
+              <div class="text-danger small mt-1" *ngIf="errors['dueAmount']">{{ errors['dueAmount'] }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-12 mb-3">
+            <label for="additionalChargesDescription" class="form-label">
+              Additional Charges Description
+            </label>
+            <textarea
+              id="additionalChargesDescription"
+              class="form-control"
+              [(ngModel)]="due.additionalChargesDescription"
+              name="additionalChargesDescription"
+              rows="3"
+              maxlength="500"
+              placeholder="Describe what the additional charges are for..."
+              [class.is-invalid]="submitted && errors['additionalChargesDescription']"
+            ></textarea>
+            <div class="text-danger small mt-1" *ngIf="errors['additionalChargesDescription']">{{ errors['additionalChargesDescription'] }}</div>
+            <div class="character-count">
+              {{ due.additionalChargesDescription?.length || 0 }}/500 characters
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Alert -->
+      <div class="alert alert-info" *ngIf="!isEditMode">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Note:</strong> This will create a single monthly due for the selected flat. 
+        To generate dues for all flats in a building, use the "Generate Monthly Dues" feature 
+        from the monthly dues list.
+      </div>
+
+      <!-- Edit Mode Warning -->
+      <div class="alert alert-warning" *ngIf="isEditMode">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Limited Edit Mode:</strong> The backend API does not currently support fetching 
+        individual monthly dues. You can only update the due amount and description.
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <app-button
+        variant="secondary"
+        (onClick)="cancel()"
+        type="button"
+      >
+        Cancel
+      </app-button>
+      <app-button
+        variant="primary"
+        type="submit"
+        [disabled]="!!(dueForm.invalid && submitted)"
+      >
+        {{ isEditMode ? 'Update' : 'Create' }} Monthly Due
+      </app-button>
+    </div>
+  </form>
+</div>

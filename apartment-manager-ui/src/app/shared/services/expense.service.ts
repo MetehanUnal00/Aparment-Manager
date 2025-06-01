@@ -46,15 +46,11 @@ export class ExpenseService {
     let url = `${this.baseUrl}/building/${buildingId}`;
     
     // Build query params from filters
+    // Note: The backend only supports startDate and endDate filters
     if (filters) {
       const params = new URLSearchParams();
-      if (filters.category) params.append('category', filters.category);
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
-      if (filters.minAmount !== undefined) params.append('minAmount', filters.minAmount.toString());
-      if (filters.maxAmount !== undefined) params.append('maxAmount', filters.maxAmount.toString());
-      if (filters.vendorName) params.append('vendorName', filters.vendorName);
-      if (filters.isRecurring !== undefined) params.append('isRecurring', filters.isRecurring.toString());
       
       const queryString = params.toString();
       if (queryString) {
@@ -63,7 +59,21 @@ export class ExpenseService {
     }
 
     return this.api.get<ExpenseResponse[]>(url).pipe(
-      tap(expenses => console.log(`Fetched ${expenses.length} expenses for building ${buildingId}`))
+      tap(expenses => console.log(`Fetched ${expenses.length} expenses for building ${buildingId}`)),
+      // Apply client-side filtering for other criteria
+      map(expenses => {
+        let filtered = expenses;
+        
+        if (filters?.category) {
+          filtered = filtered.filter(e => e.category === filters.category);
+        }
+        
+        if (filters?.isRecurring !== undefined) {
+          filtered = filtered.filter(e => e.isRecurring === filters.isRecurring);
+        }
+        
+        return filtered;
+      })
     );
   }
 
