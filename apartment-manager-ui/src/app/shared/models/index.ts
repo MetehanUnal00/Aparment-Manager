@@ -13,3 +13,4 @@ export * from './payment.model';
 export * from './monthly-due.model';
 export * from './expense.model';
 export * from './dashboard.model';
+export * from './contract.model';
