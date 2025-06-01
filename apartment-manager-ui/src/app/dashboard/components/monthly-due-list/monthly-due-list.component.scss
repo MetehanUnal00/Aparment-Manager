@@ -369,6 +369,34 @@
   .statistics-cards {
     grid-template-columns: 1fr;
   }
+
+  // Hide button text on mobile
+  .btn-text {
+    display: none;
+  }
+
+  // Mobile-friendly action buttons
+  .btn-group {
+    display: flex;
+    gap: 0.25rem;
+    
+    .btn {
+      padding: 0.5rem;
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+
+  // View toggle responsive
+  .view-toggle {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 10px !important;
+
+    .form-check {
+      width: 100%;
+    }
+  }
 }
 
 // Modal styles
@@ -432,5 +460,31 @@
   
   .btn {
     min-width: 100px;
+  }
+}
+
+// Modal responsive styles
+@media (max-width: 576px) {
+  .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+
+  .modal-content {
+    border-radius: 0.5rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+    max-height: 60vh;
+  }
+
+  .generate-form {
+    .row {
+      .col-6 {
+        width: 100%;
+        margin-bottom: 0.5rem;
+      }
+    }
   }
 }

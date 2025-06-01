@@ -5,10 +5,11 @@
     <div class="header-actions">
       <app-button
         variant="accent"
+        class="btn-touch-friendly"
         (click)="createFlat()"
         [disabled]="!selectedBuildingId">
         <i class="bi bi-plus-circle me-2"></i>
-        Add New Flat
+        <span class="btn-text">Add New Flat</span>
       </app-button>
     </div>
   </div>
@@ -20,7 +21,7 @@
         <label for="buildingSelect" class="form-label">Select Building</label>
         <select 
           id="buildingSelect"
-          class="form-select"
+          class="form-select table-controls-mobile"
           [value]="selectedBuildingId"
           (change)="onBuildingChange($event)"
           [disabled]="loading || buildings.length === 0">
@@ -33,31 +34,31 @@
 
       <div class="control-buttons">
         <button 
-          class="btn btn-sm"
+          class="btn btn-sm btn-touch-friendly"
           [class.btn-outline-cyan]="!autoRefreshEnabled"
           [class.btn-cyan]="autoRefreshEnabled"
           (click)="toggleAutoRefresh()"
           [disabled]="!selectedBuildingId">
           <i class="bi" [class.bi-play-circle]="!autoRefreshEnabled" [class.bi-pause-circle]="autoRefreshEnabled"></i>
-          {{ autoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}
+          <span class="btn-text">{{ autoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
         </button>
         
         <button 
-          class="btn btn-sm btn-outline-secondary"
+          class="btn btn-sm btn-outline-secondary btn-touch-friendly"
           (click)="refreshData()"
           [disabled]="loading || !selectedBuildingId">
           <i class="bi bi-arrow-clockwise"></i>
-          Refresh
+          <span class="btn-text">Refresh</span>
         </button>
 
         <button 
-          class="btn btn-sm"
+          class="btn btn-sm btn-touch-friendly"
           [class.btn-outline-info]="!showActiveOnly"
           [class.btn-info]="showActiveOnly"
           (click)="toggleActiveFilter()"
           [disabled]="!selectedBuildingId">
           <i class="bi bi-check-circle"></i>
-          {{ showActiveOnly ? 'Active Only' : 'Show All' }}
+          <span class="btn-text">{{ showActiveOnly ? 'Active Only' : 'Show All' }}</span>
         </button>
       </div>
     </div>
@@ -108,7 +109,7 @@
   <!-- Flats table -->
   <div class="flats-table-container" *ngIf="!loading && filteredFlats.length > 0">
     <div class="table-responsive">
-      <table class="table table-hover">
+      <table class="table table-hover" appResponsiveTable [breakpoint]="768" priorityColumns="0,2,6,7,8">
         <thead>
           <tr>
             <th (click)="sort('flatNumber')" class="sortable">
@@ -188,25 +189,28 @@
               </span>
             </td>
             <td>
-              <div class="action-buttons">
+              <div class="action-buttons btn-group">
                 <button 
-                  class="btn btn-sm btn-outline-info"
+                  class="btn btn-sm btn-outline-info btn-touch-friendly"
                   (click)="viewFlat(flat)"
                   title="View Details">
                   <i class="bi bi-eye"></i>
+                  <span class="d-none d-md-inline ms-1">View</span>
                 </button>
                 <button 
-                  class="btn btn-sm btn-outline-primary"
+                  class="btn btn-sm btn-outline-primary btn-touch-friendly"
                   (click)="editFlat(flat)"
                   title="Edit Flat">
                   <i class="bi bi-pencil"></i>
+                  <span class="d-none d-md-inline ms-1">Edit</span>
                 </button>
                 <button 
-                  class="btn btn-sm btn-outline-danger"
+                  class="btn btn-sm btn-outline-danger btn-touch-friendly"
                   (click)="confirmDelete(flat)"
                   title="Deactivate Flat"
                   [disabled]="!flat.isActive">
                   <i class="bi bi-x-circle"></i>
+                  <span class="d-none d-md-inline ms-1">Delete</span>
                 </button>
               </div>
             </td>
@@ -216,7 +220,7 @@
     </div>
 
     <!-- Summary footer -->
-    <div class="table-footer" *ngIf="selectedBuilding">
+    <div class="table-footer table-summary-mobile" *ngIf="selectedBuilding">
       <div class="summary-info">
         <span class="summary-item">
           <strong>Building:</strong> {{ selectedBuilding.name }}

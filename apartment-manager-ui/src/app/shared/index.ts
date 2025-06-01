@@ -13,6 +13,7 @@ export * from './components/search-box/search-box.component';
 // Directives
 export * from './directives/autofocus.directive';
 export * from './directives/debounce-input.directive';
+export * from './directives/responsive-table.directive';
 
 // Pipes
 export * from './pipes/currency-format.pipe';

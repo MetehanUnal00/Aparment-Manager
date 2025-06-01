@@ -25,6 +25,7 @@
       gap: 20px;
       align-items: flex-end;
       margin-bottom: 16px;
+      flex-wrap: wrap;
 
       .building-selector {
         flex: 1;
@@ -367,16 +368,26 @@
 
     .controls-section {
       .control-buttons {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-start;
+
         .btn {
-          flex: 1;
-          font-size: 12px;
-          padding: 6px 12px;
+          flex: 0 0 auto;
+          min-width: 44px;
+          min-height: 44px;
+          padding: 0.5rem;
 
           i {
-            font-size: 14px;
+            font-size: 16px;
           }
         }
       }
+    }
+
+    // Hide button text on mobile
+    .btn-text {
+      display: none;
     }
 
     .flats-table-container {
@@ -386,12 +397,15 @@
         font-size: 12px;
       }
 
-      .action-buttons {
-        flex-direction: column;
-        gap: 4px;
+      .action-buttons.btn-group {
+        display: flex;
+        gap: 0.25rem;
 
         .btn {
-          width: 100%;
+          flex: 0 0 auto;
+          min-width: 44px;
+          min-height: 44px;
+          padding: 0.5rem;
         }
       }
 

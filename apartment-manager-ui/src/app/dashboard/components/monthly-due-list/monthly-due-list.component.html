@@ -125,7 +125,7 @@
 
   <!-- Monthly dues table -->
   <div class="table-container" *ngIf="selectedBuildingId && !showDebtorsOnly && paginatedItems.length > 0 && !(loading.isLoading$ | async)">
-    <table class="table table-hover">
+    <table class="table table-hover" appResponsiveTable [breakpoint]="768" priorityColumns="0,1,4,6">
       <thead>
         <tr>
           <th (click)="sort('flat')" class="sortable">
@@ -189,10 +189,10 @@
     <!-- Pagination -->
     <div class="pagination-controls" *ngIf="totalPages > 1">
       <nav>
-        <ul class="pagination">
+        <ul class="pagination pagination-mobile">
           <li class="page-item" [class.disabled]="currentPage === 1">
             <a class="page-link" (click)="changePage(currentPage - 1)" href="javascript:void(0)">
-              Previous
+              <span>Previous</span>
             </a>
           </li>
           <li
@@ -206,7 +206,7 @@
           </li>
           <li class="page-item" [class.disabled]="currentPage === totalPages">
             <a class="page-link" (click)="changePage(currentPage + 1)" href="javascript:void(0)">
-              Next
+              <span>Next</span>
             </a>
           </li>
         </ul>
@@ -272,10 +272,10 @@
     <!-- Pagination -->
     <div class="pagination-controls" *ngIf="totalPages > 1">
       <nav>
-        <ul class="pagination">
+        <ul class="pagination pagination-mobile">
           <li class="page-item" [class.disabled]="currentPage === 1">
             <a class="page-link" (click)="changePage(currentPage - 1)" href="javascript:void(0)">
-              Previous
+              <span>Previous</span>
             </a>
           </li>
           <li
@@ -289,7 +289,7 @@
           </li>
           <li class="page-item" [class.disabled]="currentPage === totalPages">
             <a class="page-link" (click)="changePage(currentPage + 1)" href="javascript:void(0)">
-              Next
+              <span>Next</span>
             </a>
           </li>
         </ul>

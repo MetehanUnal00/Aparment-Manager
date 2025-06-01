@@ -20,6 +20,9 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
+// Directives
+import { ResponsiveTableDirective } from '../../../shared/directives/responsive-table.directive';
+
 // Pipes
 import { CurrencyFormatPipe } from '../../../shared/pipes/currency-format.pipe';
 
@@ -38,7 +41,8 @@ import { CurrencyFormatPipe } from '../../../shared/pipes/currency-format.pipe';
     EmptyStateComponent,
     ButtonComponent,
     ConfirmDialogComponent,
-    CurrencyFormatPipe
+    CurrencyFormatPipe,
+    ResponsiveTableDirective
   ],
   templateUrl: './monthly-due-list.component.html',
   styleUrls: ['./monthly-due-list.component.scss']

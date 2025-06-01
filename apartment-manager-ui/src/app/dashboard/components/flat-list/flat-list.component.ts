@@ -11,6 +11,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { SearchBoxComponent } from '../../../shared/components/search-box/search-box.component';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ResponsiveTableDirective } from '../../../shared/directives/responsive-table.directive';
 import { ApartmentBuildingResponse } from '../../../shared/models/apartment-building.model';
 import { FlatResponse } from '../../../shared/models/flat.model';
 
@@ -29,7 +30,8 @@ import { FlatResponse } from '../../../shared/models/flat.model';
     EmptyStateComponent,
     SearchBoxComponent,
     ButtonComponent,
-    ConfirmDialogComponent
+    ConfirmDialogComponent,
+    ResponsiveTableDirective
   ],
   templateUrl: './flat-list.component.html',
   styleUrls: ['./flat-list.component.scss']
