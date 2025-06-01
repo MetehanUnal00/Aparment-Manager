@@ -7,6 +7,8 @@ import { ApartmentBuildingListComponent } from './components/apartment-building-
 import { ApartmentBuildingFormComponent } from './components/apartment-building-form/apartment-building-form.component';
 import { FlatListComponent } from './components/flat-list/flat-list.component';
 import { FlatFormComponent } from './components/flat-form/flat-form.component';
+import { PaymentListComponent } from './components/payment-list/payment-list.component';
+import { PaymentFormComponent } from './components/payment-form/payment-form.component';
 
 const routes: Routes = [
   {
@@ -21,7 +23,10 @@ const routes: Routes = [
       { path: 'buildings/:id/edit', component: ApartmentBuildingFormComponent },
       { path: 'flats', component: FlatListComponent },
       { path: 'flats/new', component: FlatFormComponent },
-      { path: 'flats/:id/edit', component: FlatFormComponent }
+      { path: 'flats/:id/edit', component: FlatFormComponent },
+      { path: 'payments', component: PaymentListComponent },
+      { path: 'payments/new', component: PaymentFormComponent },
+      { path: 'payments/:id/edit', component: PaymentFormComponent }
     ]
   }
 ];

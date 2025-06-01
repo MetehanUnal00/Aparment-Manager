@@ -1,0 +1,152 @@
+<div class="payment-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Edit Payment' : 'Record New Payment' }}</h2>
+  </div>
+
+  <app-loading-spinner *ngIf="loadingPayment" text="Loading payment details..."></app-loading-spinner>
+
+  <form #paymentForm="ngForm" (ngSubmit)="onSubmit()" *ngIf="!loadingPayment" class="payment-form">
+    <!-- Building and Flat Selection -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="building" class="required">Building</label>
+          <select
+            id="building"
+            name="building"
+            [(ngModel)]="selectedBuildingId"
+            (change)="onBuildingChange()"
+            class="form-control"
+            [disabled]="isEditMode || loadingBuildings"
+            required>
+            <option [value]="null" disabled>Select a building</option>
+            <option *ngFor="let building of buildings" [value]="building.id">
+              {{ building.name }}
+            </option>
+          </select>
+          <app-loading-spinner *ngIf="loadingBuildings" text="Loading buildings..." size="small"></app-loading-spinner>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="flat" class="required">Flat</label>
+          <select
+            id="flat"
+            name="flat"
+            [(ngModel)]="payment.flatId"
+            class="form-control"
+            [disabled]="!selectedBuildingId || loadingFlats || isEditMode"
+            required>
+            <option [value]="0" disabled>Select a flat</option>
+            <option *ngFor="let flat of flats" [value]="flat.id">
+              {{ getFlatDisplay(flat) }}
+            </option>
+          </select>
+          <app-loading-spinner *ngIf="loadingFlats" text="Loading flats..." size="small"></app-loading-spinner>
+          <app-form-errors [errors]="formErrors['flatId']"></app-form-errors>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Details -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="amount" class="required">Amount</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input
+              type="number"
+              id="amount"
+              name="amount"
+              [(ngModel)]="payment.amount"
+              class="form-control"
+              placeholder="0.00"
+              step="0.01"
+              min="0.01"
+              required
+              #amountInput="ngModel">
+          </div>
+          <app-form-errors [errors]="formErrors['amount']"></app-form-errors>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="paymentDate" class="required">Payment Date</label>
+          <input
+            type="date"
+            id="paymentDate"
+            name="paymentDate"
+            [(ngModel)]="payment.paymentDate"
+            class="form-control"
+            [max]="currentDate"
+            required
+            #dateInput="ngModel">
+          <app-form-errors [errors]="formErrors['paymentDate']"></app-form-errors>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Method -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="form-group">
+          <label for="paymentMethod" class="required">Payment Method</label>
+          <select
+            id="paymentMethod"
+            name="paymentMethod"
+            [(ngModel)]="payment.paymentMethod"
+            class="form-control"
+            required>
+            <option *ngFor="let method of paymentMethods" [value]="method">
+              {{ getPaymentMethodDisplay(method) }}
+            </option>
+          </select>
+          <app-form-errors [errors]="formErrors['paymentMethod']"></app-form-errors>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="form-group">
+          <label for="description" class="required">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            [(ngModel)]="payment.description"
+            class="form-control"
+            rows="3"
+            placeholder="Enter payment description or notes..."
+            required
+            #descriptionInput="ngModel"></textarea>
+          <app-form-errors [errors]="formErrors['description']"></app-form-errors>
+          <small class="form-text text-muted">
+            Describe what this payment is for (e.g., "Monthly rent for January 2024", "Security deposit")
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <app-button
+        type="button"
+        variant="secondary"
+        (click)="onCancel()"
+        [disabled]="submitting">
+        Cancel
+      </app-button>
+      <app-button
+        type="submit"
+        variant="accent"
+        [disabled]="submitting || !paymentForm.valid"
+        [loading]="submitting">
+        {{ isEditMode ? 'Update Payment' : 'Record Payment' }}
+      </app-button>
+    </div>
+  </form>
+</div>
