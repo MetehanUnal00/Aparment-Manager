@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, tap, shareReplay, timer, switchMap } from 'rxjs';
+import { Observable, tap, shareReplay, timer, switchMap, catchError } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LoadingService } from '../../core/services/loading.service';
@@ -40,6 +40,7 @@ export class MonthlyDueService {
    * @param month Optional month filter
    */
   getDuesByFlat(flatId: number, year?: number, month?: number): Observable<MonthlyDueResponse[]> {
+    console.log('🔵 MONTHLY DUE SERVICE: Getting dues for flat', flatId, 'year:', year, 'month:', month);
     let url = `${this.baseUrl}/flat/${flatId}`;
     
     // Add query params if provided
@@ -52,7 +53,19 @@ export class MonthlyDueService {
     }
 
     return this.api.get<MonthlyDueResponse[]>(url).pipe(
-      tap(dues => console.log(`Fetched ${dues.length} monthly dues for flat ${flatId}`))
+      tap(dues => {
+        console.log('✅ MONTHLY DUE SERVICE: Received dues for flat', flatId);
+        console.log('  - Number of dues:', dues.length);
+        if (dues.length > 0) {
+          console.log('  - First due:', dues[0]);
+        } else {
+          console.log('  ⚠️ No dues found for this flat!');
+        }
+      }),
+      catchError((error: any) => {
+        console.error('❌ MONTHLY DUE SERVICE: Error getting dues', error);
+        throw error;
+      })
     );
   }
 

@@ -36,36 +36,44 @@ public class ContractDueGenerationService implements IContractDueGenerationServi
 
     @Override
     public List<MonthlyDue> generateDuesForContract(Contract contract) {
-        log.info("Generating monthly dues for contract ID: {}", contract.getId());
+        log.info("=== DUE GENERATION SERVICE CALLED ===");
+        log.info("Generating monthly dues for contract ID: {}, duesGenerated flag: {}", 
+                contract.getId(), contract.isDuesGenerated());
         
         // Validate contract hasn't already generated dues
         if (contract.isDuesGenerated()) {
+            log.error("Dues already generated for contract ID: {}", contract.getId());
             throw new BusinessRuleException("Dues already generated for this contract");
         }
         
         List<MonthlyDue> generatedDues = new ArrayList<>();
         LocalDate currentDueDate = calculateFirstDueDate(contract);
+        log.info("First due date calculated: {}, Contract period: {} to {}", 
+                currentDueDate, contract.getStartDate(), contract.getEndDate());
         
         // Generate dues for each month in the contract period
-        while (!currentDueDate.isAfter(contract.getEndDate())) {
+        // IMPORTANT: End date is exclusive - we don't charge rent for the move-out month
+        int dueCount = 0;
+        while (currentDueDate.isBefore(contract.getEndDate())) {
             MonthlyDue monthlyDue = createMonthlyDue(contract, currentDueDate);
             generatedDues.add(monthlyDue);
+            dueCount++;
+            log.debug("Created due #{} for date: {}", dueCount, currentDueDate);
             
             // Move to next month
             currentDueDate = calculateNextDueDate(currentDueDate, contract.getDayOfMonth());
-            
-            // Break if we've gone past the contract end date
-            if (currentDueDate.isAfter(contract.getEndDate())) {
-                break;
-            }
         }
+        
+        log.info("Total dues to be saved: {}", generatedDues.size());
         
         // Save all dues
         generatedDues = monthlyDueRepository.saveAll(generatedDues);
+        log.info("Successfully saved {} dues to database", generatedDues.size());
         
         // Mark contract as dues generated
         contract.setDuesGenerated(true);
-        contractRepository.save(contract);
+        Contract savedContract = contractRepository.save(contract);
+        log.info("Contract {} marked as dues generated", savedContract.getId());
         
         // Publish event for generated dues
         if (!generatedDues.isEmpty()) {
@@ -94,8 +102,8 @@ public class ContractDueGenerationService implements IContractDueGenerationServi
         List<MonthlyDue> generatedDues = new ArrayList<>();
         LocalDate currentDueDate = adjustDayOfMonth(extensionStartDate, contract.getDayOfMonth());
         
-        // Generate dues from extension start to contract end
-        while (!currentDueDate.isAfter(contract.getEndDate())) {
+        // Generate dues from extension start to contract end (exclusive)
+        while (currentDueDate.isBefore(contract.getEndDate())) {
             MonthlyDue monthlyDue = createMonthlyDue(contract, currentDueDate);
             monthlyDue.setDescription(monthlyDue.getDescription() + " (Extension)");
             generatedDues.add(monthlyDue);

@@ -80,7 +80,8 @@ public interface MonthlyDueRepository extends JpaRepository<MonthlyDue, Long> {
      * @return List of overdue dues for the building
      */
     @Query("SELECT md FROM MonthlyDue md " +
-           "JOIN md.flat f " +
+           "JOIN FETCH md.flat f " +
+           "LEFT JOIN FETCH md.contract c " +
            "WHERE f.apartmentBuilding.id = :buildingId " +
            "AND md.status = 'UNPAID' " +
            "AND md.dueDate < :currentDate " +
@@ -219,7 +220,8 @@ public interface MonthlyDueRepository extends JpaRepository<MonthlyDue, Long> {
      * @return List of overdue dues
      */
     @Query("SELECT md FROM MonthlyDue md " +
-           "JOIN md.flat f " +
+           "JOIN FETCH md.flat f " +
+           "LEFT JOIN FETCH md.contract c " +
            "WHERE f.apartmentBuilding.id = :buildingId " +
            "AND md.status = :status " +
            "ORDER BY md.dueDate ASC")
@@ -237,6 +239,7 @@ public interface MonthlyDueRepository extends JpaRepository<MonthlyDue, Long> {
      */
     @Query("SELECT md FROM MonthlyDue md " +
            "JOIN FETCH md.flat f " +
+           "LEFT JOIN FETCH md.contract c " +
            "WHERE f.apartmentBuilding.id = :buildingId " +
            "AND md.dueDate >= :startDate " +
            "AND md.dueDate <= :endDate " +

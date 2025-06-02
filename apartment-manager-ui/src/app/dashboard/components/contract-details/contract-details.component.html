@@ -20,8 +20,7 @@
         <div>
           <h2 class="h4 mb-1">Contract Details</h2>
           <p class="text-muted mb-0">
-            Contract #{{ contract.id }} 
-            <span *ngIf="flat">• Flat {{ flat.flatNumber }}</span>
+            Contract #{{ contract.id }} • Flat {{ contract.flatNumber }}
           </p>
         </div>
         <app-button
@@ -128,25 +127,20 @@
           </div>
         </div>
 
-        <!-- Flat Information Card (if available) -->
-        <div *ngIf="flat" class="card">
+        <!-- Property Information Card -->
+        <div class="card">
           <div class="card-header">
-            <h5 class="mb-0">Flat Information</h5>
+            <h5 class="mb-0">Property Information</h5>
           </div>
           <div class="card-body">
             <div class="row g-3">
-              <div class="col-md-3">
+              <div class="col-md-6">
+                <label class="text-muted small">Building</label>
+                <div>{{ contract.buildingName }}</div>
+              </div>
+              <div class="col-md-6">
                 <label class="text-muted small">Flat Number</label>
-                <div>{{ flat.flatNumber }}</div>
-              </div>
-              <!-- Removed floor field as it's not in FlatResponse -->
-              <div class="col-md-6">
-                <label class="text-muted small">Rooms</label>
-                <div>{{ flat.numberOfRooms || '-' }}</div>
-              </div>
-              <div class="col-md-6">
-                <label class="text-muted small">Size</label>
-                <div>{{ flat.areaSqMeters ? flat.areaSqMeters + ' m²' : '-' }}</div>
+                <div>{{ contract.flatNumber }}</div>
               </div>
             </div>
           </div>

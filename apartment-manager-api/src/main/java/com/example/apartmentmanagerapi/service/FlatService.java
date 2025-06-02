@@ -13,6 +13,7 @@ import com.example.apartmentmanagerapi.repository.FlatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,8 +36,10 @@ public class FlatService implements IFlatService {
     private final MonthlyDueService monthlyDueService;
     private final FlatMapper flatMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final ContractLoadingService contractLoadingService;
 
     @Transactional
+    @CacheEvict(value = "flatsWithContracts", key = "#request.apartmentBuildingId")
     public FlatResponse createFlat(FlatRequest request) {
         // Find the apartment building that this flat will belong to
         ApartmentBuilding building = apartmentBuildingRepository.findById(request.getApartmentBuildingId())
@@ -73,16 +76,42 @@ public class FlatService implements IFlatService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "flatsWithContracts", key = "#buildingId")
     public List<FlatResponse> getAllFlatsByBuildingId(Long buildingId) {
         // Verify apartment building exists
         if (!apartmentBuildingRepository.existsById(buildingId)) {
             throw new ResourceNotFoundException("ApartmentBuilding", buildingId);
         }
         
-        // Find all flats and map to response DTOs
-        return flatRepository.findByApartmentBuildingId(buildingId).stream()
-                .map(flatMapper::toResponse)
-                .collect(Collectors.toList());
+        // Load all flats for the building
+        List<Flat> flats = flatRepository.findByApartmentBuildingId(buildingId);
+        
+        // Extract flat IDs for batch loading contracts
+        List<Long> flatIds = flats.stream()
+            .map(Flat::getId)
+            .collect(Collectors.toList());
+        
+        // Batch load active contracts
+        Map<Long, com.example.apartmentmanagerapi.entity.Contract> activeContracts = 
+            contractLoadingService.loadActiveContractsForFlats(flatIds);
+        
+        // Map to responses with contract info
+        return flats.stream()
+            .map(flat -> {
+                FlatResponse response = flatMapper.toResponse(flat);
+                com.example.apartmentmanagerapi.entity.Contract activeContract = activeContracts.get(flat.getId());
+                
+                if (activeContract != null) {
+                    response.setActiveContract(contractLoadingService.mapToActiveContractInfo(activeContract));
+                    response.setOccupancyStatus(FlatResponse.OccupancyStatus.OCCUPIED);
+                } else {
+                    response.setOccupancyStatus(FlatResponse.OccupancyStatus.VACANT);
+                    response.setActiveContract(null);
+                }
+                
+                return response;
+            })
+            .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -90,10 +119,31 @@ public class FlatService implements IFlatService {
         // Find flat and map to response
         Flat flat = flatRepository.findByApartmentBuildingIdAndId(buildingId, flatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Flat", flatId, "ApartmentBuilding", buildingId));
-        return flatMapper.toResponse(flat);
+        
+        FlatResponse response = flatMapper.toResponse(flat);
+        
+        // Load active contract for this single flat
+        Map<Long, com.example.apartmentmanagerapi.entity.Contract> activeContracts = 
+            contractLoadingService.loadActiveContractsForFlats(List.of(flatId));
+        
+        com.example.apartmentmanagerapi.entity.Contract activeContract = activeContracts.get(flatId);
+        
+        if (activeContract != null) {
+            response.setActiveContract(contractLoadingService.mapToActiveContractInfo(activeContract));
+            response.setOccupancyStatus(FlatResponse.OccupancyStatus.OCCUPIED);
+        } else {
+            response.setOccupancyStatus(FlatResponse.OccupancyStatus.VACANT);
+            response.setActiveContract(null);
+        }
+        
+        // Optionally load occupancy summary for detailed view
+        response.setOccupancySummary(contractLoadingService.loadOccupancySummary(flatId));
+        
+        return response;
     }
 
     @Transactional
+    @CacheEvict(value = "flatsWithContracts", key = "#buildingId")
     public FlatResponse updateFlat(Long buildingId, Long flatId, FlatRequest request) {
         // Verify apartment building exists
         ApartmentBuilding building = apartmentBuildingRepository.findById(buildingId)
@@ -128,6 +178,7 @@ public class FlatService implements IFlatService {
     }
 
     @Transactional
+    @CacheEvict(value = "flatsWithContracts", key = "#buildingId")
     public void deleteFlat(Long buildingId, Long flatId) {
         if (!flatRepository.existsById(flatId)) {
              throw new ResourceNotFoundException("Flat", flatId);
@@ -183,10 +234,35 @@ public class FlatService implements IFlatService {
             throw new ResourceNotFoundException("ApartmentBuilding", buildingId);
         }
         
-        // Find active flats and map to response DTOs
-        return flatRepository.findByApartmentBuildingIdAndIsActiveTrue(buildingId).stream()
-                .map(flatMapper::toResponse)
-                .collect(Collectors.toList());
+        // Find active flats
+        List<Flat> activeFlats = flatRepository.findByApartmentBuildingIdAndIsActiveTrue(buildingId);
+        
+        // Extract flat IDs for batch loading contracts
+        List<Long> flatIds = activeFlats.stream()
+            .map(Flat::getId)
+            .collect(Collectors.toList());
+        
+        // Batch load active contracts
+        Map<Long, com.example.apartmentmanagerapi.entity.Contract> activeContracts = 
+            contractLoadingService.loadActiveContractsForFlats(flatIds);
+        
+        // Map to responses with contract info
+        return activeFlats.stream()
+            .map(flat -> {
+                FlatResponse response = flatMapper.toResponse(flat);
+                com.example.apartmentmanagerapi.entity.Contract activeContract = activeContracts.get(flat.getId());
+                
+                if (activeContract != null) {
+                    response.setActiveContract(contractLoadingService.mapToActiveContractInfo(activeContract));
+                    response.setOccupancyStatus(FlatResponse.OccupancyStatus.OCCUPIED);
+                } else {
+                    response.setOccupancyStatus(FlatResponse.OccupancyStatus.VACANT);
+                    response.setActiveContract(null);
+                }
+                
+                return response;
+            })
+            .collect(Collectors.toList());
     }
     
     /**

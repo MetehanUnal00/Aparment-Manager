@@ -115,7 +115,9 @@ export class ContractDetailsComponent implements OnInit, OnDestroy {
           this.contract = contract;
           this.updateStatusFlags();
           this.updateActionFlags();
-          this.loadFlatDetails();
+          // Skip loading flat details since we don't have buildingId in contract response
+          // and the contract already contains basic flat info (flatNumber)
+          this.isLoading = false;
         },
         error: (error) => {
           console.error('Error loading contract:', error);
@@ -130,7 +132,7 @@ export class ContractDetailsComponent implements OnInit, OnDestroy {
    * Load flat details for the contract
    */
   private loadFlatDetails(): void {
-    if (!this.contract) {
+    if (!this.contract || !this.contract.buildingId || !this.contract.flatId) {
       this.isLoading = false;
       return;
     }

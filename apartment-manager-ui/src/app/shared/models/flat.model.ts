@@ -5,6 +5,42 @@
 import { BaseEntity } from './common.model';
 
 /**
+ * Active contract information embedded in FlatResponse
+ */
+export interface ActiveContractInfo {
+  contractId: number;
+  tenantName?: string;
+  tenantEmail?: string;
+  tenantContact?: string;
+  monthlyRent: number;
+  securityDeposit: number;
+  startDate: string;
+  endDate: string;
+  moveInDate: string;
+  daysUntilExpiry?: number;
+  isExpiringSoon: boolean;
+  contractStatus: string;
+  outstandingBalance?: number;
+  hasOverdueDues?: boolean;
+}
+
+/**
+ * Occupancy summary for historical data
+ */
+export interface OccupancySummary {
+  totalContracts: number;
+  firstOccupancyDate?: string;
+  lastVacancyDate?: string;
+  averageRent: number;
+  totalMonthsOccupied: number;
+}
+
+/**
+ * Occupancy status enum
+ */
+export type OccupancyStatus = 'OCCUPIED' | 'VACANT' | 'PENDING_MOVE_IN';
+
+/**
  * Flat response interface matching backend FlatResponse DTO
  */
 export interface FlatResponse {
@@ -16,31 +52,24 @@ export interface FlatResponse {
   apartmentBuildingName: string;
   createdAt: string;
   updatedAt: string;
-  tenantName?: string;
-  tenantContact?: string;
-  tenantEmail?: string;
-  monthlyRent?: number;
-  securityDeposit?: number;
-  tenantMoveInDate?: string;
   isActive: boolean;
   currentBalance?: number;
-  hasActiveContract?: boolean;
+  
+  // Contract information
+  activeContract?: ActiveContractInfo;
+  occupancyStatus: OccupancyStatus;
+  occupancySummary?: OccupancySummary;
 }
 
 /**
  * Request interface for creating/updating flat
+ * Note: Tenant information is now managed through contracts
  */
 export interface FlatRequest {
   flatNumber: string;
   numberOfRooms?: number;
   areaSqMeters?: number;
   apartmentBuildingId: number;
-  tenantName?: string;
-  tenantContact?: string;
-  tenantEmail?: string;
-  monthlyRent?: number;
-  securityDeposit?: number;
-  tenantMoveInDate?: string;
   isActive?: boolean;
 }
 

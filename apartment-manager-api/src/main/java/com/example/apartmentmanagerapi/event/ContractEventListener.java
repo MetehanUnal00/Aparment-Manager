@@ -3,14 +3,18 @@ package com.example.apartmentmanagerapi.event;
 import com.example.apartmentmanagerapi.entity.AuditLog;
 import com.example.apartmentmanagerapi.entity.Contract;
 import com.example.apartmentmanagerapi.entity.MonthlyDue;
+import com.example.apartmentmanagerapi.repository.ContractRepository;
 import com.example.apartmentmanagerapi.service.IAuditService;
 import com.example.apartmentmanagerapi.service.IContractDueGenerationService;
 import com.example.apartmentmanagerapi.service.IContractNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -28,18 +32,29 @@ public class ContractEventListener {
     private final IContractDueGenerationService dueGenerationService;
     private final IContractNotificationService notificationService;
     private final IAuditService auditService;
+    private final ContractRepository contractRepository;
     
     /**
      * Handle contract creation - generate dues and send notifications
+     * Using @TransactionalEventListener to ensure contract is committed before processing
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleContractCreated(ContractCreatedEvent event) {
-        log.info("Handling contract created event for contract ID: {}", event.getContract().getId());
+        log.info("=== CONTRACT EVENT LISTENER TRIGGERED ===");
+        log.info("Handling contract created event for contract ID: {}, generateDues: {}", 
+                event.getContract().getId(), event.isGenerateDuesImmediately());
         
         // Generate monthly dues if requested
         if (event.isGenerateDuesImmediately()) {
+            log.info("Attempting to generate dues for contract ID: {}", event.getContract().getId());
             try {
-                List<MonthlyDue> generatedDues = dueGenerationService.generateDuesForContract(event.getContract());
+                // Reload the contract to ensure it's attached to the current persistence context
+                Contract contract = contractRepository.findById(event.getContract().getId())
+                    .orElseThrow(() -> new RuntimeException("Contract not found: " + event.getContract().getId()));
+                log.info("Reloaded contract ID: {}, duesGenerated: {}", contract.getId(), contract.isDuesGenerated());
+                
+                List<MonthlyDue> generatedDues = dueGenerationService.generateDuesForContract(contract);
                 log.info("Generated {} monthly dues for contract ID: {}", 
                         generatedDues.size(), event.getContract().getId());
                 
@@ -57,6 +72,9 @@ public class ContractEventListener {
         
         // Send notification asynchronously
         sendContractCreationNotificationAsync(event);
+        
+        // Evict caches for the flat
+        evictFlatCaches(event.getContract());
     }
     
     /**
@@ -89,6 +107,10 @@ public class ContractEventListener {
         
         // Send renewal notification
         sendContractRenewalNotificationAsync(event);
+        
+        // Evict caches for both old and new contracts
+        evictFlatCaches(event.getOldContract());
+        evictFlatCaches(event.getNewContract());
     }
     
     /**
@@ -114,6 +136,9 @@ public class ContractEventListener {
         
         // Send cancellation notification
         sendContractCancellationNotificationAsync(event);
+        
+        // Evict caches for the flat
+        evictFlatCaches(event.getContract());
     }
     
     /**
@@ -143,6 +168,10 @@ public class ContractEventListener {
         
         // Send modification notification
         sendContractModificationNotificationAsync(event);
+        
+        // Evict caches for both old and new contracts
+        evictFlatCaches(event.getOldContract());
+        evictFlatCaches(event.getNewContract());
     }
     
     /**
@@ -219,5 +248,43 @@ public class ContractEventListener {
             log.error("Error sending contract modification notification for contract ID: {}", 
                      event.getNewContract().getId(), e);
         }
+    }
+    
+    /**
+     * Evict flat-related caches when contract changes
+     * This ensures that flat lists show updated contract information
+     */
+    private void evictFlatCaches(Contract contract) {
+        if (contract == null || contract.getFlat() == null) {
+            return;
+        }
+        
+        Long flatId = contract.getFlat().getId();
+        Long buildingId = contract.getFlat().getApartmentBuilding().getId();
+        
+        // Evict the building's flat list cache
+        evictBuildingFlatsCache(buildingId);
+        
+        // Evict individual flat caches
+        evictFlatActiveContractCache(flatId);
+        evictFlatOccupancySummaryCache(flatId);
+        
+        log.debug("Evicted caches for flat {} in building {} due to contract change", 
+                 flatId, buildingId);
+    }
+    
+    @CacheEvict(value = "flatsWithContracts", key = "#buildingId")
+    public void evictBuildingFlatsCache(Long buildingId) {
+        // Method implementation is handled by Spring's @CacheEvict
+    }
+    
+    @CacheEvict(value = "flatActiveContract", key = "#flatId")
+    public void evictFlatActiveContractCache(Long flatId) {
+        // Method implementation is handled by Spring's @CacheEvict
+    }
+    
+    @CacheEvict(value = "flatOccupancySummary", key = "#flatId")
+    public void evictFlatOccupancySummaryCache(Long flatId) {
+        // Method implementation is handled by Spring's @CacheEvict
     }
 }

@@ -98,5 +98,32 @@ public class CacheConfig {
                         .maximumSize(200)
                         .recordStats()
                         .build());
+        
+        // Flats with contracts cache - refreshed every 5 minutes
+        // Used for flat lists with embedded contract information
+        cacheManager.registerCustomCache("flatsWithContracts",
+                Caffeine.newBuilder()
+                        .expireAfterWrite(5, TimeUnit.MINUTES)
+                        .maximumSize(1000)
+                        .recordStats()
+                        .build());
+        
+        // Individual flat active contract cache - refreshed every 10 minutes
+        // Used for caching active contract info for individual flats
+        cacheManager.registerCustomCache("flatActiveContract",
+                Caffeine.newBuilder()
+                        .expireAfterWrite(10, TimeUnit.MINUTES)
+                        .maximumSize(500)
+                        .recordStats()
+                        .build());
+        
+        // Flat occupancy summary cache - refreshed every 30 minutes
+        // Historical data that changes less frequently
+        cacheManager.registerCustomCache("flatOccupancySummary",
+                Caffeine.newBuilder()
+                        .expireAfterWrite(30, TimeUnit.MINUTES)
+                        .maximumSize(200)
+                        .recordStats()
+                        .build());
     }
 }

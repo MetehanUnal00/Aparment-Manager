@@ -73,6 +73,7 @@ public interface MonthlyDueMapper {
     
     /**
      * Maps the flat entity to a flat summary for the response.
+     * Gets tenant information from the associated contract if available.
      * 
      * @param entity the monthly due entity with flat information
      * @return the flat summary DTO
@@ -81,11 +82,21 @@ public interface MonthlyDueMapper {
         if (entity.getFlat() == null) {
             return null;
         }
+        
+        // Get tenant information from the contract if available
+        String tenantName = null;
+        String tenantContact = null;
+        
+        if (entity.getContract() != null) {
+            tenantName = entity.getContract().getTenantName();
+            tenantContact = entity.getContract().getTenantContact();
+        }
+        
         return MonthlyDueResponse.FlatSummary.builder()
                 .id(entity.getFlat().getId())
                 .flatNumber(entity.getFlat().getFlatNumber())
-                .tenantName(entity.getFlat().getTenantName())
-                .tenantContact(entity.getFlat().getTenantContact())
+                .tenantName(tenantName)
+                .tenantContact(tenantContact)
                 .build();
     }
 }

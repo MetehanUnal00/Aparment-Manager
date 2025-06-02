@@ -39,7 +39,7 @@
           [disabled]="!selectedBuildingId || loadingFlats">
           <option [value]="null">All flats</option>
           <option *ngFor="let flat of flats" [value]="flat.id">
-            {{ flat.flatNumber }} - {{ flat.tenantName || 'Vacant' }}
+            {{ flat.flatNumber }} - {{ flat.activeContract?.tenantName || 'Vacant' }}
           </option>
         </select>
       </div>

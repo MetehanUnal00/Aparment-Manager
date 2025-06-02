@@ -13,7 +13,7 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ResponsiveTableDirective } from '../../../shared/directives/responsive-table.directive';
 import { ApartmentBuildingResponse } from '../../../shared/models/apartment-building.model';
-import { FlatResponse } from '../../../shared/models/flat.model';
+import { FlatResponse, OccupancyStatus } from '../../../shared/models/flat.model';
 
 /**
  * Component for displaying and managing flats within apartment buildings
@@ -241,8 +241,8 @@ export class FlatListComponent implements OnInit, OnDestroy {
       const term = this.searchTerm.toLowerCase();
       filtered = filtered.filter(flat =>
         flat.flatNumber.toLowerCase().includes(term) ||
-        (flat.tenantName && flat.tenantName.toLowerCase().includes(term)) ||
-        (flat.tenantEmail && flat.tenantEmail.toLowerCase().includes(term))
+        (flat.activeContract?.tenantName && flat.activeContract.tenantName.toLowerCase().includes(term)) ||
+        (flat.activeContract?.tenantEmail && flat.activeContract.tenantEmail.toLowerCase().includes(term))
       );
     }
 
@@ -371,7 +371,7 @@ export class FlatListComponent implements OnInit, OnDestroy {
    * Get count of occupied flats
    */
   getOccupiedFlatsCount(): number {
-    return this.flats.filter(f => !!f.tenantName).length;
+    return this.flats.filter(f => f.occupancyStatus === 'OCCUPIED').length;
   }
 
   /**
@@ -393,14 +393,45 @@ export class FlatListComponent implements OnInit, OnDestroy {
    * Get occupancy status text
    */
   getOccupancyStatus(flat: FlatResponse): string {
-    return flat.tenantName ? 'Occupied' : 'Vacant';
+    const statusMap: Record<OccupancyStatus, string> = {
+      'OCCUPIED': 'Occupied',
+      'VACANT': 'Vacant',
+      'PENDING_MOVE_IN': 'Pending Move-in'
+    };
+    return statusMap[flat.occupancyStatus] || 'Unknown';
   }
 
   /**
    * Get occupancy badge class
    */
   getOccupancyBadgeClass(flat: FlatResponse): string {
-    return flat.tenantName ? 'badge-success' : 'badge-secondary';
+    const classMap: Record<OccupancyStatus, string> = {
+      'OCCUPIED': 'badge-success',
+      'VACANT': 'badge-warning',
+      'PENDING_MOVE_IN': 'badge-info'
+    };
+    return classMap[flat.occupancyStatus] || 'badge-secondary';
+  }
+  
+  /**
+   * Get tenant display name
+   */
+  getTenantDisplay(flat: FlatResponse): string {
+    return flat.activeContract?.tenantName || '-';
+  }
+  
+  /**
+   * Get monthly rent display
+   */
+  getMonthlyRentDisplay(flat: FlatResponse): string {
+    return flat.activeContract ? this.formatCurrency(flat.activeContract.monthlyRent) : '-';
+  }
+  
+  /**
+   * Get tenant contact display
+   */
+  getTenantContactDisplay(flat: FlatResponse): string {
+    return flat.activeContract?.tenantContact || '-';
   }
 
   /**

@@ -324,7 +324,7 @@ public class MonthlyDueController {
         )
     })
     @GetMapping("/building/{buildingId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'VIEWER')")
     public ResponseEntity<List<MonthlyDueResponse>> getAllDuesForBuilding(
             @Parameter(description = "ID of the building", required = true)
             @PathVariable Long buildingId) {

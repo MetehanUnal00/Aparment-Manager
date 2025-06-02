@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil, EMPTY, of } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, switchMap, takeUntil, EMPTY, of, timer, tap, map } from 'rxjs';
 
 // Services
 import { ContractService } from '../../../shared/services/contract.service';
@@ -113,6 +113,9 @@ export class ContractFormComponent implements OnInit, OnDestroy {
       notes: ['', Validators.maxLength(1000)],
       generateDuesImmediately: [true]
     });
+    
+    console.log('🔵 CONTRACT FORM: Form initialized');
+    console.log('  - generateDuesImmediately default:', this.contractForm.get('generateDuesImmediately')?.value);
   }
   
   /**
@@ -147,9 +150,9 @@ export class ContractFormComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (flats) => {
-          // Filter only active flats without active contracts
+          // Filter only active flats without active contracts (vacant flats)
           this.availableFlats = flats.filter(flat => 
-            flat.isActive && !flat.hasActiveContract
+            flat.isActive && flat.occupancyStatus === 'VACANT'
           );
           this.isLoadingFlats = false;
           
@@ -238,7 +241,8 @@ export class ContractFormComponent implements OnInit, OnDestroy {
     const end = new Date(endDate);
     let currentDate = new Date(start);
     
-    while (currentDate <= end) {
+    // Generate dues up to but not including the end date month
+    while (currentDate < end) {
       const monthName = currentDate.toLocaleDateString('en-US', { 
         month: 'long', 
         year: 'numeric' 
@@ -260,9 +264,14 @@ export class ContractFormComponent implements OnInit, OnDestroy {
    * Submit the contract form
    */
   onSubmit(): void {
+    console.log('🔵 CONTRACT FORM: Submit button clicked');
+    console.log('  - Form valid?', this.contractForm.valid);
+    console.log('  - Form value:', this.contractForm.value);
+    
     if (this.contractForm.invalid || this.overlapError || this.isSubmitting) {
       this.contractForm.markAllAsTouched();
       this.formErrors = this.getFormErrors();
+      console.log('❌ CONTRACT FORM: Form validation failed', this.formErrors);
       return;
     }
     
@@ -284,16 +293,66 @@ export class ContractFormComponent implements OnInit, OnDestroy {
       generateDuesImmediately: formValue.generateDuesImmediately
     };
     
+    console.log('📤 CONTRACT FORM: Sending contract request', contractRequest);
+    console.log('  - Generate dues immediately?', contractRequest.generateDuesImmediately);
+    
     this.contractService.createContract(contractRequest)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (contract) => {
-          this.notificationService.success('Contract created successfully');
-          // Navigate to contract details
-          this.router.navigate(['../contracts', contract.id], { relativeTo: this.route });
+          console.log('✅ CONTRACT FORM: Contract created, response:', contract);
+          console.log('  - Contract ID:', contract.id);
+          console.log('  - Total dues generated:', contract.totalDuesGenerated);
+          
+          // If generateDuesImmediately was true but no dues were generated yet,
+          // check again after a short delay (due to async processing)
+          if (this.contractForm.get('generateDuesImmediately')?.value && (!contract.totalDuesGenerated || contract.totalDuesGenerated === 0)) {
+            console.log('⏳ CONTRACT FORM: Dues not generated yet, checking again in 2 seconds...');
+            
+            // Check contract details after a delay
+            timer(2000).pipe(
+              switchMap(() => this.contractService.getContractById(contract.id)),
+              tap(updatedContract => {
+                console.log('📊 CONTRACT FORM: Updated contract details:', updatedContract);
+                console.log('  - Total dues now:', updatedContract.totalDuesGenerated);
+                
+                if (updatedContract.totalDuesGenerated && updatedContract.totalDuesGenerated > 0) {
+                  this.notificationService.success(
+                    `Contract created successfully! ${updatedContract.totalDuesGenerated} monthly dues generated.`
+                  );
+                } else {
+                  this.notificationService.success(
+                    'Contract created successfully! Monthly dues will be generated shortly.'
+                  );
+                }
+              }),
+              takeUntil(this.destroy$)
+            ).subscribe({
+              next: () => {
+                // Navigate to contract details
+                this.router.navigate(['../contracts', contract.id], { relativeTo: this.route });
+              },
+              error: (error) => {
+                console.error('Error checking contract status:', error);
+                // Navigate anyway
+                this.router.navigate(['../contracts', contract.id], { relativeTo: this.route });
+              }
+            });
+          } else {
+            // Dues were already generated or not requested
+            this.notificationService.success(
+              contract.totalDuesGenerated && contract.totalDuesGenerated > 0 
+                ? `Contract created successfully! ${contract.totalDuesGenerated} monthly dues generated.`
+                : 'Contract created successfully!'
+            );
+            
+            // Navigate to contract details
+            this.router.navigate(['../contracts', contract.id], { relativeTo: this.route });
+          }
         },
         error: (error: any) => {
-          console.error('Error creating contract:', error);
+          console.error('❌ CONTRACT FORM: Error creating contract:', error);
+          console.error('  - Full error object:', error);
           this.isSubmitting = false;
           
           if (error.error?.message) {

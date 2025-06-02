@@ -42,7 +42,8 @@ public class ContractService implements IContractService {
 
     @Override
     public ContractResponse createContract(ContractRequest request) {
-        log.info("Creating new contract for flat ID: {}", request.getFlatId());
+        log.info("Creating new contract for flat ID: {}, generateDuesImmediately: {}", 
+                request.getFlatId(), request.isGenerateDuesImmediately());
         
         // Validate flat exists and is active
         Flat flat = flatRepository.findById(request.getFlatId())
@@ -85,8 +86,11 @@ public class ContractService implements IContractService {
         Long userId = currentUser != null ? currentUser.getId() : null;
         
         // Publish event for due generation
+        log.info("Publishing ContractCreatedEvent for contract ID: {}, generateDues: {}, userId: {}", 
+                contract.getId(), request.isGenerateDuesImmediately(), userId);
         eventPublisher.publishEvent(new ContractCreatedEvent(
             this, contract, request.isGenerateDuesImmediately(), userId));
+        log.info("ContractCreatedEvent published successfully");
         
         // Audit log
         auditService.logSuccess(

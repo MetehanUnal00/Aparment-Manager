@@ -165,10 +165,10 @@ export class MonthlyDueFormComponent implements OnInit, OnDestroy {
   onFlatChange(): void {
     if (!this.due.flatId) return;
 
-    // Find selected flat to pre-fill rent amount
+    // Find selected flat to pre-fill rent amount from active contract
     const selectedFlat = this.flats.find(f => f.id === this.due.flatId);
-    if (selectedFlat && selectedFlat.monthlyRent) {
-      this.due.baseRent = selectedFlat.monthlyRent;
+    if (selectedFlat && selectedFlat.activeContract?.monthlyRent) {
+      this.due.baseRent = selectedFlat.activeContract.monthlyRent;
       this.updateTotalAmount();
     }
   }
@@ -306,7 +306,7 @@ export class MonthlyDueFormComponent implements OnInit, OnDestroy {
    * Check if flat is occupied
    */
   isFlatOccupied(flat: FlatResponse): boolean {
-    return !!flat.tenantName;
+    return flat.occupancyStatus === 'OCCUPIED';
   }
 
   /**
@@ -314,8 +314,8 @@ export class MonthlyDueFormComponent implements OnInit, OnDestroy {
    */
   getFlatDisplayName(flat: FlatResponse): string {
     let name = flat.flatNumber;
-    if (flat.tenantName) {
-      name += ` - ${flat.tenantName}`;
+    if (flat.activeContract?.tenantName) {
+      name += ` - ${flat.activeContract.tenantName}`;
     } else {
       name += ' (Vacant)';
     }

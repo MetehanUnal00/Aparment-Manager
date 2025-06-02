@@ -25,11 +25,8 @@ public class H2DialectCustom extends H2Dialect {
                 return null;
             }
             
-            @Override
-            public String getIdentitySelectString() {
-                // H2 uses SCOPE_IDENTITY() instead of IDENTITY()
-                return "select scope_identity()";
-            }
+            // Removed getIdentitySelectString override as it doesn't exist in parent
+            // The parent class already handles this correctly for H2
             
             @Override
             public boolean hasDataTypeInIdentityColumn() {

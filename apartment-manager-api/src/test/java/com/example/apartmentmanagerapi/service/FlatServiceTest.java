@@ -76,11 +76,6 @@ class FlatServiceTest {
         testRequest.setNumberOfRooms(3);
         testRequest.setAreaSqMeters(BigDecimal.valueOf(120.50));
         testRequest.setApartmentBuildingId(1L);
-        testRequest.setTenantName("John Doe");
-        testRequest.setTenantContact("+1234567890");
-        testRequest.setTenantEmail("john.doe@example.com");
-        testRequest.setMonthlyRent(BigDecimal.valueOf(1500));
-        testRequest.setSecurityDeposit(BigDecimal.valueOf(3000));
         testRequest.setIsActive(true);
 
         testBuilding = new ApartmentBuilding();
@@ -94,23 +89,21 @@ class FlatServiceTest {
         testFlat.setNumberOfRooms(3);
         testFlat.setAreaSqMeters(BigDecimal.valueOf(120.50));
         testFlat.setApartmentBuilding(testBuilding);
-        testFlat.setTenantName("John Doe");
-        testFlat.setTenantEmail("john.doe@example.com");
         testFlat.setIsActive(true);
 
-        testResponse = new FlatResponse(
-                1L,
-                "101",
-                3,
-                BigDecimal.valueOf(120.50),
-                1L,
-                "Test Building",
-                LocalDateTime.now(),
-                LocalDateTime.now()
-        );
-        testResponse.setTenantName("John Doe");
-        testResponse.setTenantEmail("john.doe@example.com");
-        testResponse.setIsActive(true);
+        testResponse = FlatResponse.builder()
+                .id(1L)
+                .flatNumber("101")
+                .numberOfRooms(3)
+                .areaSqMeters(BigDecimal.valueOf(120.50))
+                .apartmentBuildingId(1L)
+                .apartmentBuildingName("Test Building")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .isActive(true)
+                .currentBalance(BigDecimal.ZERO)
+                .occupancyStatus(FlatResponse.OccupancyStatus.VACANT)
+                .build();
     }
 
     // Tests for createFlat method
@@ -192,10 +185,17 @@ class FlatServiceTest {
         flat2.setId(2L);
         flat2.setFlatNumber("102");
 
-        FlatResponse response2 = new FlatResponse(
-                2L, "102", 2, BigDecimal.valueOf(80),
-                1L, "Test Building", null, null
-        );
+        FlatResponse response2 = FlatResponse.builder()
+                .id(2L)
+                .flatNumber("102")
+                .numberOfRooms(2)
+                .areaSqMeters(BigDecimal.valueOf(80))
+                .apartmentBuildingId(1L)
+                .apartmentBuildingName("Test Building")
+                .isActive(true)
+                .currentBalance(BigDecimal.ZERO)
+                .occupancyStatus(FlatResponse.OccupancyStatus.VACANT)
+                .build();
 
         when(apartmentBuildingRepository.existsById(1L)).thenReturn(true);
         when(flatRepository.findByApartmentBuildingId(1L)).thenReturn(Arrays.asList(testFlat, flat2));
@@ -456,36 +456,14 @@ class FlatServiceTest {
         verify(flatMapper).toResponse(testFlat);
     }
 
-    // Tests for updateTenantInfo method
-    @Test
-    @DisplayName("Update tenant info - Success")
-    void updateTenantInfo_Success() {
-        // Arrange
-        FlatRequest tenantUpdateRequest = new FlatRequest();
-        tenantUpdateRequest.setTenantName("Jane Doe");
-        tenantUpdateRequest.setTenantContact("+0987654321");
-        tenantUpdateRequest.setTenantEmail("jane.doe@example.com");
-        tenantUpdateRequest.setMonthlyRent(BigDecimal.valueOf(2000));
-        tenantUpdateRequest.setSecurityDeposit(BigDecimal.valueOf(4000));
-        tenantUpdateRequest.setTenantMoveInDate(LocalDateTime.now());
-
-        when(flatRepository.findByApartmentBuildingIdAndId(1L, 1L)).thenReturn(Optional.of(testFlat));
-        when(flatRepository.save(any(Flat.class))).thenReturn(testFlat);
-        when(flatMapper.toResponse(testFlat)).thenReturn(testResponse);
-
-        // Act
-        FlatResponse result = flatService.updateTenantInfo(1L, 1L, tenantUpdateRequest);
-
-        // Assert
-        assertThat(result).isNotNull();
-
-        // Verify tenant fields were updated
-        verify(flatRepository).findByApartmentBuildingIdAndId(1L, 1L);
-        verify(flatRepository).save(testFlat);
-        assertThat(testFlat.getTenantName()).isEqualTo("Jane Doe");
-        assertThat(testFlat.getTenantContact()).isEqualTo("+0987654321");
-        assertThat(testFlat.getTenantEmail()).isEqualTo("jane.doe@example.com");
-    }
+    // Tests for updateTenantInfo method - REMOVED
+    // Tenant info is now managed through contracts, not flats
+    // @Test
+    // @DisplayName("Update tenant info - Success")
+    // void updateTenantInfo_Success() {
+    //     This test has been removed because tenant information
+    //     is now managed through the Contract entity
+    // }
 
     // Tests for deactivateFlat method
     @Test

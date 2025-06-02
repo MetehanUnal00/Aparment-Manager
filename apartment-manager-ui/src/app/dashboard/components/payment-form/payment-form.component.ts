@@ -277,7 +277,7 @@ export class PaymentFormComponent implements OnInit {
 
   // Get flat display name
   getFlatDisplay(flat: FlatResponse): string {
-    const tenant = flat.tenantName ? ` - ${flat.tenantName}` : ' - Vacant';
+    const tenant = flat.activeContract?.tenantName ? ` - ${flat.activeContract.tenantName}` : ' - Vacant';
     return `${flat.flatNumber}${tenant}`;
   }
 }

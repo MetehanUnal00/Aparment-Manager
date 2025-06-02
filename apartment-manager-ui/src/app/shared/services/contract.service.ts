@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, tap, shareReplay, timer, switchMap, BehaviorSubject, map, of } from 'rxjs';
+import { Observable, tap, shareReplay, timer, switchMap, BehaviorSubject, map, of, catchError } from 'rxjs';
 import { HttpParams } from '@angular/common/http';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -55,10 +55,25 @@ export class ContractService {
    * Create a new contract
    */
   createContract(contract: ContractRequest): Observable<ContractResponse> {
+    console.log('🔵 CONTRACT SERVICE: Creating contract', contract);
+    console.log('  - generateDuesImmediately:', contract.generateDuesImmediately);
+    console.log('  - flatId:', contract.flatId);
+    console.log('  - date range:', contract.startDate, 'to', contract.endDate);
+    
     return this.api.post<ContractResponse>(this.baseUrl, contract).pipe(
       tap(created => {
+        console.log('✅ CONTRACT SERVICE: Contract created successfully', created);
+        console.log('  - Contract ID:', created.id);
+        console.log('  - Dues generated?:', created.duesGenerated);
+        console.log('  - Total dues:', created.totalDuesGenerated);
+        console.log('  - Full response:', JSON.stringify(created, null, 2));
         this.notification.success(`Contract for flat ${created.flatNumber} created successfully`);
         this.invalidateCache();
+      }),
+      catchError((error: any) => {
+        console.error('❌ CONTRACT SERVICE: Error creating contract', error);
+        console.error('  - Error response:', error.error);
+        throw error;
       })
     );
   }

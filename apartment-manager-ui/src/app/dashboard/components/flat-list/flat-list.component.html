@@ -119,11 +119,8 @@
                 [class.bi-chevron-down]="sortColumn === 'flatNumber' && sortDirection === 'desc'"></i>
             </th>
             <th>Status</th>
-            <th (click)="sort('tenantName')" class="sortable">
+            <th>
               Tenant
-              <i class="bi" 
-                [class.bi-chevron-up]="sortColumn === 'tenantName' && sortDirection === 'asc'"
-                [class.bi-chevron-down]="sortColumn === 'tenantName' && sortDirection === 'desc'"></i>
             </th>
             <th>Contact</th>
             <th (click)="sort('numberOfRooms')" class="sortable text-center">
@@ -138,11 +135,8 @@
                 [class.bi-chevron-up]="sortColumn === 'areaSqMeters' && sortDirection === 'asc'"
                 [class.bi-chevron-down]="sortColumn === 'areaSqMeters' && sortDirection === 'desc'"></i>
             </th>
-            <th (click)="sort('monthlyRent')" class="sortable text-end">
+            <th class="text-end">
               Monthly Rent
-              <i class="bi" 
-                [class.bi-chevron-up]="sortColumn === 'monthlyRent' && sortDirection === 'asc'"
-                [class.bi-chevron-down]="sortColumn === 'monthlyRent' && sortDirection === 'desc'"></i>
             </th>
             <th (click)="sort('currentBalance')" class="sortable text-end">
               Balance
@@ -165,22 +159,22 @@
                 Inactive
               </span>
             </td>
-            <td>{{ flat.tenantName || '-' }}</td>
+            <td>{{ getTenantDisplay(flat) }}</td>
             <td>
               <div class="contact-info">
-                <small class="text-muted d-block" *ngIf="flat.tenantContact">
-                  <i class="bi bi-telephone me-1"></i>{{ flat.tenantContact }}
+                <small class="text-muted d-block" *ngIf="flat.activeContract?.tenantContact">
+                  <i class="bi bi-telephone me-1"></i>{{ flat.activeContract?.tenantContact }}
                 </small>
-                <small class="text-muted d-block" *ngIf="flat.tenantEmail">
-                  <i class="bi bi-envelope me-1"></i>{{ flat.tenantEmail }}
+                <small class="text-muted d-block" *ngIf="flat.activeContract?.tenantEmail">
+                  <i class="bi bi-envelope me-1"></i>{{ flat.activeContract?.tenantEmail }}
                 </small>
-                <small class="text-muted" *ngIf="!flat.tenantContact && !flat.tenantEmail">-</small>
+                <small class="text-muted" *ngIf="!flat.activeContract || (!flat.activeContract.tenantContact && !flat.activeContract.tenantEmail)">-</small>
               </div>
             </td>
             <td class="text-center">{{ flat.numberOfRooms || '-' }}</td>
             <td class="text-center">{{ flat.areaSqMeters || '-' }}</td>
             <td class="text-end">
-              {{ flat.monthlyRent ? formatCurrency(flat.monthlyRent) : '-' }}
+              {{ getMonthlyRentDisplay(flat) }}
             </td>
             <td class="text-end" [ngClass]="getBalanceClass(flat.currentBalance || 0)">
               <span [title]="getBalanceTooltip(flat.currentBalance || 0)">

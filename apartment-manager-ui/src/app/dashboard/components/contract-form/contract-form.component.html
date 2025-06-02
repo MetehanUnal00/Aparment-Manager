@@ -64,8 +64,7 @@
                           {{ isLoadingFlats ? 'Loading flats...' : 'Select a flat' }}
                         </option>
                         <option *ngFor="let flat of availableFlats" [value]="flat.id">
-                          {{ flat.flatNumber }} 
-                          <span *ngIf="flat.tenantName">({{ flat.tenantName }})</span>
+                          {{ flat.flatNumber }}
                         </option>
                       </select>
                       <div class="spinner-border spinner-border-sm position-absolute top-50 end-0 translate-middle-y me-3" 

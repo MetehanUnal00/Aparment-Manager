@@ -129,4 +129,15 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
            "JOIN FETCH f.apartmentBuilding ab " +
            "WHERE c.id IN :contractIds")
     List<Contract> findContractsForNotification(@Param("contractIds") List<Long> contractIds);
+    
+    /**
+     * Find active contracts for multiple flats (batch loading)
+     * Used to efficiently load contract information when displaying flat lists
+     */
+    @Query("SELECT c FROM Contract c " +
+           "JOIN FETCH c.flat f " +
+           "WHERE c.flat.id IN :flatIds " +
+           "AND c.status = 'ACTIVE' " +
+           "AND CURRENT_DATE BETWEEN c.startDate AND c.endDate")
+    List<Contract> findActiveContractsByFlatIds(@Param("flatIds") List<Long> flatIds);
 }

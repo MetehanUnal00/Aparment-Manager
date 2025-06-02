@@ -223,10 +223,10 @@ export class DashboardOverviewComponent implements OnInit, OnDestroy {
         // Update flats data
         this.flats = results.flats;
         this.summary.totalFlats = results.flats.length;
-        this.summary.occupiedFlats = results.flats.filter(f => f.tenantName).length;
+        this.summary.occupiedFlats = results.flats.filter(f => f.occupancyStatus === 'OCCUPIED').length;
         
-        // Calculate monthly income target (sum of all flat monthly rents)
-        this.summary.monthlyIncomeTarget = results.flats.reduce((sum, flat) => sum + (flat.monthlyRent || 0), 0);
+        // Calculate monthly income target (sum of all flat monthly rents from active contracts)
+        this.summary.monthlyIncomeTarget = results.flats.reduce((sum, flat) => sum + (flat.activeContract?.monthlyRent || 0), 0);
 
         // Update debtor data
         this.debtors = results.debtors;

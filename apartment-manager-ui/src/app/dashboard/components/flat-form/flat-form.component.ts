@@ -38,18 +38,13 @@ export class FlatFormComponent implements OnInit {
 
   /**
    * Form data model
+   * Note: Tenant information is now managed through contracts
    */
   formData: FlatRequest = {
     flatNumber: '',
     numberOfRooms: undefined,
     areaSqMeters: undefined,
     apartmentBuildingId: 0,
-    tenantName: '',
-    tenantContact: '',
-    tenantEmail: '',
-    monthlyRent: undefined,
-    securityDeposit: undefined,
-    tenantMoveInDate: undefined,
     isActive: true
   };
 
@@ -166,12 +161,6 @@ export class FlatFormComponent implements OnInit {
       numberOfRooms: flat.numberOfRooms,
       areaSqMeters: flat.areaSqMeters,
       apartmentBuildingId: flat.apartmentBuildingId,
-      tenantName: flat.tenantName || '',
-      tenantContact: flat.tenantContact || '',
-      tenantEmail: flat.tenantEmail || '',
-      monthlyRent: flat.monthlyRent,
-      securityDeposit: flat.securityDeposit,
-      tenantMoveInDate: flat.tenantMoveInDate ? this.formatDateForInput(flat.tenantMoveInDate) : undefined,
       isActive: flat.isActive
     };
   }
@@ -199,17 +188,7 @@ export class FlatFormComponent implements OnInit {
 
     // Prepare the request data
     const requestData: FlatRequest = {
-      ...this.formData,
-      // Ensure empty strings are converted to undefined for optional fields
-      tenantName: this.formData.tenantName || undefined,
-      tenantContact: this.formData.tenantContact || undefined,
-      tenantEmail: this.formData.tenantEmail || undefined,
-      monthlyRent: this.formData.monthlyRent || undefined,
-      securityDeposit: this.formData.securityDeposit || undefined,
-      // Convert date string to LocalDateTime format (add time component)
-      tenantMoveInDate: this.formData.tenantMoveInDate 
-        ? `${this.formData.tenantMoveInDate}T00:00:00` 
-        : undefined
+      ...this.formData
     };
 
     if (this.isEditMode && this.flatId && this.buildingId) {
@@ -250,35 +229,11 @@ export class FlatFormComponent implements OnInit {
   }
 
   /**
-   * Calculate today's date for move-in date validation
-   */
-  get today(): string {
-    return new Date().toISOString().split('T')[0];
-  }
-
-  /**
    * Handle building change
    */
   onBuildingChange(): void {
     this.buildingId = this.formData.apartmentBuildingId;
   }
 
-  /**
-   * Check if tenant fields have any value
-   */
-  get hasTenantInfo(): boolean {
-    return !!(this.formData.tenantName || this.formData.tenantContact || this.formData.tenantEmail);
-  }
 
-  /**
-   * Clear all tenant information
-   */
-  clearTenantInfo(): void {
-    this.formData.tenantName = '';
-    this.formData.tenantContact = '';
-    this.formData.tenantEmail = '';
-    this.formData.monthlyRent = undefined;
-    this.formData.securityDeposit = undefined;
-    this.formData.tenantMoveInDate = undefined;
-  }
 }
